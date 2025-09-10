@@ -1,11 +1,14 @@
-import { IsNumber, Min } from 'class-validator';
+import { IsNumber, Max, Min } from 'class-validator';
 
 export class CalcularImcDto {
   @IsNumber()
-  @Min(0.1) // Altura mínima razonable
+  @Min(0.01, { message: 'La altura debe ser mayor que 0' })
+  @Max(2.99, { message: 'La altura no puede ser mayor a 3 metros' })
   altura: number;
 
   @IsNumber()
-  @Min(1) // Peso mínimo razonable
+  @Min(0.01, { message: 'El peso debe ser mayor que 0' })
+  @Max(499.99, { message: 'El peso no puede ser mayor a 500 kg' })
   peso: number;
 }
+
