@@ -17,7 +17,7 @@ export class PaginacionHistorialImcDto {
   @Min(1, { message: 'mostrar debe ser mayor o igual a 1' })
   mostrar: number = 5;
 
-  // El tipo 'asc' | 'desc' lo validamos con el pipe, no es necesario chequear
+  // El pipe "sort-validation.pipe.ts" valida si esta string es 'asc' | 'desc'
   @IsOptional()
-  sort?: any;
+  sort?: string;
 }
