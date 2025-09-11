@@ -1,6 +1,6 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { ImcService } from "./imc.service";
-import { CalcularImcDto } from "./dto/calcular-imc-dto";
+import { CalcularImcDto } from "./dto/calculo-imc.dto";
 
 
 describe('ImcService', () => {
