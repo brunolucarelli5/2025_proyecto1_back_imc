@@ -50,6 +50,7 @@ export class CalculoImcRepository implements ICalculoImcRepository {
         }
     }
 
+
     async save(historial: CreateHistorialImcDto): Promise<CalculoImc> {
         try {
             return await this.repo.save(historial);

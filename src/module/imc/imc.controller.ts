@@ -27,6 +27,7 @@ export class ImcController {
     return this.imcService.findPag(paginacion);
   }
 
+
   @Post('calcular')
   calcular(@Body(ValidationPipe) data: CalculoImcDto) {
     return this.imcService.calcularImc(data);

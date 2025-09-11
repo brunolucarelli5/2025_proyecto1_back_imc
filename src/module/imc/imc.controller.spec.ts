@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ImcController } from './imc.controller';
 import { ImcService } from './imc.service';
-import { CalcularImcDto } from './dto/calculo-imc.dto';
+import { CalculoImcDto } from './dto/calculo-imc.dto';
 import { BadRequestException, ValidationPipe } from '@nestjs/common';
 
 describe('ImcController', () => {
@@ -30,7 +30,7 @@ describe('ImcController', () => {
   });
 
   it('should return IMC and category for valid input', async () => {
-    const dto: CalcularImcDto = { altura: 1.75, peso: 70 };
+    const dto: CalculoImcDto = { altura: 1.75, peso: 70 };
     jest.spyOn(service, 'calcularImc').mockReturnValue({ imc: 22.86, categoria: 'Normal' });
 
     const result = await controller.calcular(dto);
@@ -39,12 +39,12 @@ describe('ImcController', () => {
   });
 
   it('should throw BadRequestException for invalid input', async () => {
-    const invalidDto: CalcularImcDto = { altura: -1, peso: 70 };
+    const invalidDto: CalculoImcDto = { altura: -1, peso: 70 };
 
     // Aplicar ValidationPipe manualmente en la prueba
     const validationPipe = new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true });
 
-    await expect(validationPipe.transform(invalidDto, { type: 'body', metatype: CalcularImcDto }))
+    await expect(validationPipe.transform(invalidDto, { type: 'body', metatype: CalculoImcDto }))
       .rejects.toThrow(BadRequestException);
 
     // Verificar que el servicio no se llama porque la validación falla antes
