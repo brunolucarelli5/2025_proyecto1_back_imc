@@ -14,8 +14,6 @@ export class CalculoImcRepository implements ICalculoImcRepository {
         private readonly repo: Repository<CalculoImc>,
     ) {}
 
-
-
     async findAllSorted(sort: 'ASC' | 'DESC'): Promise<CalculoImc[]> {
         try {
             return await this.repo.find({
@@ -28,7 +26,6 @@ export class CalculoImcRepository implements ICalculoImcRepository {
             throw new InternalServerErrorException( `Error al obtener el historial ordenado (${sort}) de IMC. Error: ${error}`);
         }
     }
-
 
     async findPag(pag: number, mostrar: number, sort: 'ASC' | 'DESC' ): Promise<[CalculoImc[], number]> {
         const skip = (pag - 1) * mostrar;   // No nos interesa atrapar errores de esta cte, sino del ORM.
@@ -43,7 +40,6 @@ export class CalculoImcRepository implements ICalculoImcRepository {
             throw new InternalServerErrorException(`Error al paginar el historial de IMC. Error:` + error);
         }
     }
-
 
     async save(historial: CreateHistorialImcDto): Promise<CalculoImc> {
         try {
