@@ -6,10 +6,10 @@ export class CalculoImc {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column('decimal', {precision: 4, scale: 2})  //hasta 99.99
+  @Column('decimal', {precision: 4, scale: 2})
   altura: number;
 
-  @Column('decimal', {precision: 6, scale: 2})  //hasta 9999.99
+  @Column('decimal', {precision: 6, scale: 2})
   peso: number;
 
   @Column('decimal', {precision: 6, scale: 2})

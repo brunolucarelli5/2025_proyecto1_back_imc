@@ -16,4 +16,8 @@ export class PaginacionHistorialImcDto {
   @IsInt({ message: 'mostrar debe ser un número entero' })
   @Min(1, { message: 'mostrar debe ser mayor o igual a 1' })
   mostrar: number = 5;
+
+  // El tipo 'asc' | 'desc' lo validamos con el pipe, no es necesario chequear
+  @IsOptional()
+  sort?: any;
 }

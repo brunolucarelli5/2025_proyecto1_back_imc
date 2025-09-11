@@ -15,35 +15,29 @@ export class CalculoImcRepository implements ICalculoImcRepository {
     ) {}
 
 
-    async findAll(): Promise<CalculoImc[]> {
-        try {
-            return await this.repo.find();
-        } catch (error) {
-            throw new InternalServerErrorException('Error al buscar todo el historial de cálculos IMC. Error:' + error);
-        }
-    }
 
-    async findAllDesc(): Promise<CalculoImc[]> {
+    async findAllSorted(sort: 'ASC' | 'DESC'): Promise<CalculoImc[]> {
         try {
             return await this.repo.find({
                 order: {
-                    fecha_calculo: 'DESC',
+                    fecha_calculo: sort,
                 },
             });
+
         } catch (error) {
-            throw new InternalServerErrorException('Error al obtener el historial descendiente de IMC. Error: ' + error);
+            throw new InternalServerErrorException( `Error al obtener el historial ordenado (${sort}) de IMC. Error: ${error}`);
         }
     }
 
 
-    async findPag(pag: number, mostrar: number): Promise<[CalculoImc[], number]> {
+    async findPag(pag: number, mostrar: number, sort: 'ASC' | 'DESC' ): Promise<[CalculoImc[], number]> {
         const skip = (pag - 1) * mostrar;   // No nos interesa atrapar errores de esta cte, sino del ORM.
 
         try {
             return this.repo.findAndCount({
                 skip,                                     //TypeORM devuelve [elementos[], total]
                 take: mostrar,                           //elementos[]: Elementos de la página que solicitamos
-                order: { id: 'ASC' },                   //total: cantidad total de registros]
+                order: { fecha_calculo: sort },         //total: cantidad total de registros]
             });                                        //Por eso la promesa es [CalculoImc[], number].
         } catch (error) {
             throw new InternalServerErrorException(`Error al paginar el historial de IMC. Error:` + error);

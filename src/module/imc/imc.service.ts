@@ -38,19 +38,28 @@ export class ImcService {
   /*
     FUNCIONES LLAMADAS POR EL CONTROLLER
   */
+  async findAllSorted(sort: 'asc' | 'desc' = 'desc'): Promise<CalculoImc[]> {
 
-  async findAll(): Promise<CalculoImc[]> {
-    return await this.imcRepository.findAll()
+    const sortUpper = sort.toUpperCase();
+
+    if (sortUpper === 'ASC') {
+      return this.imcRepository.findAllSorted('ASC');
+    } else {
+      return this.imcRepository.findAllSorted('DESC');
+    }
   }
 
-  async findAllDesc(): Promise<CalculoImc[]> {
-    return await this.imcRepository.findAllDesc()
-  }
-
-  async findPag(paginacion: PaginacionHistorialImcDto) {
-    const {pag, mostrar} = paginacion
-    const [data, total] = await this.imcRepository.findPag(pag, mostrar);
-    return {data, total}
+  async findPag(
+    paginacion: PaginacionHistorialImcDto,
+    sort: 'asc' | 'desc' = 'desc'
+  ): Promise<{ data: CalculoImc[]; total: number }> {
+    // Type assertion: convertimos el string a tipo 'ASC' | 'DESC' para cumplir con lo que espera TypeORM
+    const sortMayus = sort.toUpperCase() as 'ASC' | 'DESC';   
+    
+    //Desestructuramos
+    const { pag, mostrar } = paginacion;
+    const [data, total] = await this.imcRepository.findPag(pag, mostrar, sortMayus);
+    return { data, total };
   }
 
   async calcularImc(data: CalculoImcDto): Promise<CalculoImc> {
