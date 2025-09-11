@@ -31,7 +31,7 @@ export class CalculoImcRepository implements ICalculoImcRepository {
                 },
             });
         } catch (error) {
-            throw new InternalServerErrorException('Error al obtener el historial ordenado de IMC. Error: ' + error);
+            throw new InternalServerErrorException('Error al obtener el historial descendiente de IMC. Error: ' + error);
         }
     }
 
