@@ -1,6 +1,6 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { sign, verify } from 'jsonwebtoken';
-import { Payload } from '../interfaces/payload';
+import { Payload } from '../interfaces/payload.interface';
 import { jwtConfig } from './jwt-config';
 
 @Injectable()

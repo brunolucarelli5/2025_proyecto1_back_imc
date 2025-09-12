@@ -1,12 +1,11 @@
 //ARCHIVO: users.controller.ts
-
-import { Body, Controller, Delete, Get, Param, Patch, Post, Put, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { LoginDTO } from '../interfaces/login.dto';
 import { RegisterDTO } from '../interfaces/register.dto';
 import { Request } from 'express';
 import { AuthGuard } from '../guards/auth.guard';
-import { RequestWithUser } from '../interfaces/request-with-user';
+import { RequestWithUser } from '../interfaces/request-with-user.interface';
 
 
 @Controller('/usuarios')
