@@ -1,11 +1,22 @@
+//ARCHIVO: jwt.service.ts
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { sign, verify } from 'jsonwebtoken';
 import { Payload } from '../interfaces/payload.interface';
-import { jwtConfig } from './jwt-config';
 
 @Injectable()
 export class JwtService {
-  config = jwtConfig
+
+  //config.ts
+  config = {
+      access: {
+        secret: "accessSecret",
+        expiresIn: "15m",
+      },
+      refresh: {
+        secret: "refreshSecret",
+        expiresIn: "1d",
+      },
+    };
   
   generateToken(payload: Payload, type: 'refresh' | 'access' = 'access'): string {
     //El método sign() toma un payload y lo firma con un secreto. Le añade además exp, iat, etc. 
