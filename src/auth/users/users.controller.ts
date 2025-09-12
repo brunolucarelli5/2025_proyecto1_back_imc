@@ -12,7 +12,7 @@ import { TokenPairDTO } from '../dto/token-pair.dto';
 import { UserEntity } from '../entities/user.entity';
 
 
-@Controller('/usuarios')
+@Controller('usuarios')
 export class UsersController {
   constructor(private service: UsersService) {}
 
@@ -35,14 +35,16 @@ export class UsersController {
   /*
     GET
   */
+  @UseGuards(AuthGuard)
   @Get()
   findAll(): Promise<UserEntity[]> {
     return this.service.findAll();
   }
 
   //Este endpoint trabaja sobre el header, no sobre @Body, @Query, @Param, entonces NO necesita DTO.
-  //Sirve para refresh & auth, ver jwtService.
-  @Get('refresh')                         
+  //Al hacer /usuarios/login, 
+  @UseGuards(AuthGuard)
+  @Get('tokens')                         
   refreshToken(@Req() request: Request){
     return this.service.refreshToken(
       request.headers['refresh-token'] as string,
@@ -66,6 +68,7 @@ export class UsersController {
   /*
     PATCH
   */
+  @UseGuards(AuthGuard)
   @Patch('/:id')
   update(@Param('id', ParseIntPipe) id: number, @Body() body: UpdateUserDTO): Promise<UserEntity> {
     return this.service.update(id, body);
@@ -74,6 +77,7 @@ export class UsersController {
   /*
     DELETE
   */
+  @UseGuards(AuthGuard)
   @Delete('/:id')
   delete(@Param('id', ParseIntPipe) id: number): Promise<MessageResponseDTO> {
     return this.service.delete(id);

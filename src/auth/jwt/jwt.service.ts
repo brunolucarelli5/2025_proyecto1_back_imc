@@ -60,7 +60,7 @@ export class JwtService {
   }
  
   //Verifica el token y devuelve su contenido (es decir, su payload).
-  getPayload(token: string, type: 'refresh' | 'auth' = 'auth'): Payload {
+  getPayload(token: string, type: 'refresh' | 'access' = 'access'): Payload {
     const payload = verify(token, this.config[type].secret);
 
     //verify() nos puede devolver un token en formato string o como un objeto JwtPayload. Como 
