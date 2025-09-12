@@ -1,11 +1,14 @@
 //ARCHIVO: users.service.ts
-import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
-import { LoginDTO } from '../interfaces/login.dto';
-import { RegisterDTO } from '../interfaces/register.dto';
+import { BadRequestException, Inject, Injectable, UnauthorizedException } from '@nestjs/common';
+import { LoginDTO } from '../dto/login.dto';
+import { RegisterDTO } from '../dto/register.dto';
 import { UserEntity } from '../entities/user.entity';
 import { hashSync, compareSync } from 'bcrypt';
 import { JwtService } from 'src/auth/jwt/jwt.service';
 import { IUserRepository } from './repositories/users.repository.interface';
+import { UpdateUserDTO } from '../dto/update-user.dto';
+import { MessageResponseDTO } from '../dto/response.dto';
+import { TokenPairDTO } from '../dto/token-pair.dto';
 
 /*
   Si agregamos roles, será necesario agregar/modificar los métodos:
@@ -28,12 +31,23 @@ export class UsersService {
     Métodos que NO NECESITAN PERMANENCIA a través del repository
   */
   async refreshToken(refreshToken: string) {
+    if (!refreshToken) throw new BadRequestException('El token de refresh es obligatorio.');
     return this.jwtService.refreshToken(refreshToken);
   }
 
   /*
     Métodos que UTILIZAN PERMANENCIA a través del repository
   */
+
+  async findAll(): Promise<UserEntity[]> {
+    return await this.userRepository.findAll()
+  }
+
+  async findByEmail(email: string): Promise<UserEntity | null> {
+    return await this.userRepository.findByEmail(email);
+  }
+
+
   async register(body: RegisterDTO) {
     const user = new UserEntity();
     Object.assign(user, body);
@@ -41,7 +55,7 @@ export class UsersService {
     return await this.userRepository.save(user);
   }
 
-  async login(body: LoginDTO) {
+  async login(body: LoginDTO): Promise<TokenPairDTO> {
 
     const user = await this.findByEmail(body.email);
     if (!user) throw new UnauthorizedException();
@@ -53,7 +67,9 @@ export class UsersService {
     //Si el usuario pasó el logueo, le damos los tokens
     return {
       //En generateToken() se especifica que si no pasás nada, type = 'access' → usa config.access
-      accessToken: this.jwtService.generateToken({ email: user.email }), 
+      accessToken: this.jwtService.generateToken(
+        { email: user.email }
+      ), 
       refreshToken: this.jwtService.generateToken(
         {email: user.email},
         'refresh',
@@ -61,28 +77,20 @@ export class UsersService {
     };
   }
 
-  async findByEmail(email: string): Promise<UserEntity | null> {
-    return await this.userRepository.findByEmail(email);
-  }
-
-  async findAll() {
-    return await this.userRepository.findAll()
-  }
-
-
-  async update(id: string, body: any) {
-    //El body puede tener muchos campos, como firstName, lastName, etc. Si uno de ellos es una
-    //contraseña, nos aseguramos de hashearla antes de guardarla en la bd. 
-    body['password'] = hashSync(body['password'], 10)
+  async update(id: number, body: UpdateUserDTO): Promise<UserEntity> {
+    //Todos los atributos son opcionales al actualizar. Si llegan a pasar una contraseña nueva,
+    //nos aseguramos de hashearla antes de guardarla en la bd. 
+    if (body.password) {
+      body.password = hashSync(body.password, 10);
+    }
     const actualizado = await this.userRepository.update(id, body)
 
     if (!actualizado) throw new UnauthorizedException()
-    return { message: 'Usuario actualizado exitosamente.' }    
+    return actualizado  
   }
 
-  async delete(id: string) {
+  async delete(id: number): Promise<MessageResponseDTO> {
     const result = await this.userRepository.delete(id)
-
     if (!result) throw new UnauthorizedException();
     
     return { message: 'Eliminado' }

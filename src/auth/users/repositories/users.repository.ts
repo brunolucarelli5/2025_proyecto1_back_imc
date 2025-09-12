@@ -14,6 +14,15 @@ export class UserRepository implements IUserRepository {
         private readonly repo: Repository<UserEntity>,
     ) {}
 
+
+    async findAll(): Promise<UserEntity[]> {
+        try {
+            return this.repo.find();
+        } catch (error) {
+            throw new InternalServerErrorException('Error al obtener todos los usuarios. ' + error);
+        }
+    }
+
     async findByEmail(email: string): Promise<UserEntity | null> {
         try {
             return await this.repo.findOneBy({ email });
@@ -22,13 +31,6 @@ export class UserRepository implements IUserRepository {
         }
     }
 
-  async findAll(): Promise<UserEntity[]> {
-    try {
-      return this.repo.find();
-    } catch (error) {
-      throw new InternalServerErrorException('Error al obtener todos los usuarios. ' + error);
-    }
-  }
 
   async save(user: UserEntity): Promise<UserEntity> {
     try {
@@ -38,30 +40,25 @@ export class UserRepository implements IUserRepository {
     }
   }
 
-  async update(id: string, user: Partial<UserEntity>): Promise<boolean> {
+  async update(id: number, user: Partial<UserEntity>): Promise<UserEntity | null> {
     try {
-        /*
-            El método update() de TypeORM devuelve un objeto UpdateResult. Su atributo .affected 
-            puede valer:
-                result.affected = 1: Se actualizó / eliminó el registro.
-                result.affected = 0: El id no existía, entonces no se hizo nada.
-            Por eso hacemos la comparación lógica (result.affected !== 0), que puede ser:
-                true: significa que el resultado fue 1, entonces se actualizó exitosamente.
-                false: Significa que el resultado fue 0, entonces no se actualizó exitosamente.
-        */
-        const result = await this.repo.update(id, user);
-        return (result.affected !== 0);
+        await this.repo.update(id, user);
+        return await this.repo.findOneBy({ id })
     } catch (error) {
         throw new InternalServerErrorException('Error al actualizar el usuario. ' + error);
     }
   }
 
-  async delete(id: string): Promise<boolean> {
+  async delete(id: number): Promise<boolean> {
     try {
-        /* 
-            Con la misma lógica de update, el método delete() también devuelve un objeto
-            DeleteResult, con el atributo affected, el cual será 1 si el usuario se eliminó, o 0
-            si no se encontró un usuario con esa ID (es decir, si no se eliminó).
+        /*
+            El método delete() de TypeORM devuelve un objeto DeleteResult. Su atributo .affected 
+            puede valer:
+                result.affected = 1: Se eliminó el registro.
+                result.affected = 0: El id no existía, entonces no se hizo nada.
+            Por eso hacemos la comparación lógica (result.affected !== 0), que puede ser:
+                true: significa que el resultado fue 1, entonces se eliminó exitosamente.
+                false: Significa que el resultado fue 0, entonces no se eliminó exitosamente.
         */
         const result = await this.repo.delete(id);
         return (result.affected !== 0);

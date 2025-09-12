@@ -39,7 +39,9 @@ export class JwtService {
       }
       
       //Caso contrario, generamos solamente el access.
-      return {accessToken: this.generateToken({ email: payload.email })};
+      return {
+        accessToken: this.generateToken({ email: payload.email })
+      };
       
     } catch (error) {
       throw new UnauthorizedException()

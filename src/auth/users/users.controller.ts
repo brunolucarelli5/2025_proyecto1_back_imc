@@ -1,56 +1,81 @@
 //ARCHIVO: users.controller.ts
-import { Body, Controller, Delete, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import { UsersService } from './users.service';
-import { LoginDTO } from '../interfaces/login.dto';
-import { RegisterDTO } from '../interfaces/register.dto';
+import { LoginDTO } from '../dto/login.dto';
+import { RegisterDTO } from '../dto/register.dto';
 import { Request } from 'express';
 import { AuthGuard } from '../guards/auth.guard';
 import { RequestWithUser } from '../interfaces/request-with-user.interface';
+import { UpdateUserDTO } from '../dto/update-user.dto';
+import { MessageResponseDTO } from '../dto/response.dto';
+import { TokenPairDTO } from '../dto/token-pair.dto';
+import { UserEntity } from '../entities/user.entity';
 
 
 @Controller('/usuarios')
 export class UsersController {
   constructor(private service: UsersService) {}
 
+
+  /*
+    EJEMPLO
+    /usuarios/yo es un endpoint de ejemplo creado para entender el concepto de Requests.
+    Las Requests en sí están explicadas en auth.guard, línea 55+
+  */
   @UseGuards(AuthGuard)
   @Get('me')
   me(@Req() req: RequestWithUser) {
-    return {                        //Explicado en auth.guard, línea 50+
+    return {
       nombre: req.user.firstName,
+      apellido: req.user.lastName,
       email: req.user.email
     }
   }
 
-  @Post('login')
-  login(@Body() body: LoginDTO) {
-    return this.service.login(body);
+  /*
+    GET
+  */
+  @Get()
+  findAll(): Promise<UserEntity[]> {
+    return this.service.findAll();
   }
 
-  @Post('register')
-  register(@Body() body: RegisterDTO) {
-    return this.service.register(body);
-  }
-
-  @Get('refresh')                         //Sirve para refresh & auth, ver jwtService
-  refreshToken(@Req() request: Request) {
+  //Este endpoint trabaja sobre el header, no sobre @Body, @Query, @Param, entonces NO necesita DTO.
+  //Sirve para refresh & auth, ver jwtService.
+  @Get('refresh')                         
+  refreshToken(@Req() request: Request){
     return this.service.refreshToken(
       request.headers['refresh-token'] as string,
     );
   }
 
-  @Get()
-  findAll() {
-    return this.service.findAll();
+  /*
+    POST
+  */
+  @Post('login')
+  login(@Body() body: LoginDTO): Promise<TokenPairDTO> {
+    return this.service.login(body);
+  }
+
+  @Post('register')
+  register(@Body() body: RegisterDTO): Promise<UserEntity> {
+    return this.service.register(body);
   }
 
 
+  /*
+    PATCH
+  */
   @Patch('/:id')
-  update(@Param('id') id: string, @Body() body: any) {
+  update(@Param('id', ParseIntPipe) id: number, @Body() body: UpdateUserDTO): Promise<UserEntity> {
     return this.service.update(id, body);
   }
 
+  /*
+    DELETE
+  */
   @Delete('/:id')
-  delete(@Param('id') id: string) {
+  delete(@Param('id', ParseIntPipe) id: number): Promise<MessageResponseDTO> {
     return this.service.delete(id);
   }
 }
