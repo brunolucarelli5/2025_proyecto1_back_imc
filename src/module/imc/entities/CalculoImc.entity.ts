@@ -20,4 +20,7 @@ export class CalculoImc {
 
   @CreateDateColumn()
   fecha_calculo: Date;
+
+  
+
 }

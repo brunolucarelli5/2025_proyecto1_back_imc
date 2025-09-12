@@ -6,6 +6,7 @@ import { CalculoImc } from './module/imc/entities/CalculoImc.entity';
 import { ImcModule } from './module/imc/imc.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { UsersModule } from './auth/users/users.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { AppService } from './app.service';
     }),
 
     ImcModule,
+    UsersModule,
   ],
   controllers: [AppController],
   providers: [AppService],
