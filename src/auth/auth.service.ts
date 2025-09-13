@@ -27,11 +27,11 @@ export class AuthService {
   async login(body: LoginDTO): Promise<TokenPairDTO> {
 
     const user = await this.usersService.findByEmail(body.email);
-    if (!user) throw new UnauthorizedException();
+    if (!user) throw new UnauthorizedException('No se pudo loguear. Correo electrónico inválido.');
 
     //compareSync nos permite comparar el pswd plano que pasó el usuario con el hasheado de la bd.
     const compareResult = compareSync(body.password, user.password); 
-    if (!compareResult) throw new UnauthorizedException();
+    if (!compareResult) throw new UnauthorizedException('No se pudo loguear. Contraseña incorrecta.');
 
     //Si el usuario pasó el logueo, le damos los tokens
     return {

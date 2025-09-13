@@ -1,5 +1,5 @@
 //ARCHIVO: users.service.ts
-import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { RegisterDTO } from './dto/register.dto';
 import { UserEntity } from './entities/user.entity';
 import { hashSync} from 'bcrypt';
@@ -33,9 +33,14 @@ export class UsersService {
 
 
   async register(body: RegisterDTO) {
-    const user = new UserEntity();
-    Object.assign(user, body);
+    //Creamos un objeto usuario con los datos del body: RegisterDTO
+    const user = Object.assign(new UserEntity(), body);
     user.password = hashSync(user.password, 10); //Jamás guardamos contraseñas planas.
+    
+    //Verificamos que el correo no esté registrado
+    if (await this.userRepository.findByEmail(body.email)) {
+      throw new BadRequestException('Ya existe un usuario con ese email');
+    }
     return await this.userRepository.save(user);
   }
 
@@ -47,13 +52,13 @@ export class UsersService {
     }
     const actualizado = await this.userRepository.update(id, body)
 
-    if (!actualizado) throw new UnauthorizedException()
+    if (!actualizado) throw new NotFoundException('No se pudo actualizar el usuario. Verifica que la ID exista.')
     return actualizado  
   }
 
   async delete(id: number): Promise<MessageResponseDTO> {
     const result = await this.userRepository.delete(id)
-    if (!result) throw new UnauthorizedException();
+    if (!result) throw new NotFoundException('No se pudo eliminar el usuario. Verifica que la ID exista.');
     
     return { message: 'Usuario ID N°' + id + ' eliminado.'  }
   }
