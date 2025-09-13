@@ -5,6 +5,7 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtModule } from './jwt/jwt.module';
 import { UsersModule } from 'src/users/users.module';
+import { AuthGuard } from './guards/auth.guard';
 
 @Module({
   imports: [
@@ -12,6 +13,13 @@ import { UsersModule } from 'src/users/users.module';
     UsersModule, // Necesario para usar UsersService en AuthService
   ],
   controllers: [AuthController],
-  providers: [AuthService],
+  providers: [
+    AuthService, 
+    AuthGuard
+  ],
+  exports: [
+    AuthGuard,    //Exportamos AuthGuard porque lo usamos en imc
+    JwtModule,
+  ]
 })
 export class AuthModule {}

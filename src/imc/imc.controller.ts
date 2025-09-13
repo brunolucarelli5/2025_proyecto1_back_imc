@@ -1,12 +1,16 @@
 //ARCHIVO: imc.controller.ts
 
-import { Controller, Post, Body, ValidationPipe, Get, Query } from '@nestjs/common';
+import { Controller, Post, Body, ValidationPipe, Get, Query, UseGuards, Req } from '@nestjs/common';
 import { ImcService } from './imc.service';
 import { CalculoImcDto } from './dto/calculo-imc.dto';
 import { PaginacionHistorialImcDto } from './dto/paginacion-historial-imc.dto';
 import { CalculoImc } from './entities/CalculoImc.entity';
 import { SortValidationPipe } from './pipes/sort-validation.pipe';
 import { ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
+import { PaginacionResponseDto } from './dto/paginacion-response.dto';
+import { AuthGuard } from 'src/auth/guards/auth.guard';
+import { RequestWithUser } from 'src/auth/interfaces/request-with-user.interface';
+import { CalculoImcResponseDto } from './dto/calculo-imc-response.dto';
 
 
 @Controller('imc')
@@ -15,31 +19,39 @@ export class ImcController {
   constructor(private readonly imcService: ImcService) {}
 
 
-  //@ApiBearerAuth()
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Calcula el IMC y lo guarda' })
+  @UseGuards(AuthGuard)
+  @Post('calcular')
+  calcular(
+    @Body(ValidationPipe) data: CalculoImcDto,
+    @Req() req: RequestWithUser
+  ): Promise<CalculoImcResponseDto> {
+    return this.imcService.calcularImc(data, req.user);
+  }
+
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Devuelve el historial de cálculos del usuario' })
+  @UseGuards(AuthGuard)
   @Get('historial')
-  getHistorial(@Query('sort', new SortValidationPipe()) sort: 'asc' | 'desc' = 'desc'): Promise<CalculoImc[]> {
-    return this.imcService.findAllSorted(sort);
+  getHistorial(
+    @Query('sort', new SortValidationPipe()) sort: 'asc' | 'desc' = 'desc',
+    @Req() req: RequestWithUser
+  ): Promise<CalculoImc[]> {
+    return this.imcService.findAllSorted(sort, req.user.id);
   }
 
 
-
-  //@ApiBearerAuth()
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Devuelve cálculos del usuario paginados' })
-  @Get('historial')
+  @UseGuards(AuthGuard)
   @Get('pag')           //Esta query tiene el formato: /imc/pag?pag=2&mostrar=5
   async findPag(
     @Query() paginacion: PaginacionHistorialImcDto,
-    @Query('sort', new SortValidationPipe()) sort: 'asc' | 'desc' = 'desc'
-  ): Promise<{ data: CalculoImc[]; total: number }> {
-    return this.imcService.findPag(paginacion, sort);
-  }
-
-  //@ApiBearerAuth()
-  @ApiOperation({ summary: 'Calcula el IMC y lo guarda' })
-  @Post('calcular')
-  calcular(@Body(ValidationPipe) data: CalculoImcDto) {
-    return this.imcService.calcularImc(data);
+    @Query('sort', new SortValidationPipe()) sort: 'asc' | 'desc' = 'desc',
+    @Req() req: RequestWithUser
+  ): Promise<PaginacionResponseDto> {
+    return this.imcService.findPag(paginacion, sort, req.user.id);
   }
 
 }

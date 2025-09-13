@@ -1,4 +1,6 @@
-import { BaseEntity, Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { Exclude } from 'class-transformer';
+import { CalculoImc } from 'src/imc/entities/CalculoImc.entity';
+import { BaseEntity, Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 
 /*
   Cuando agreguemos roles, vamos a cambiar esto por un 
@@ -22,4 +24,8 @@ export class UserEntity extends BaseEntity {
 
   @Column()
   lastName: string;
+
+  //Añadimos la relación, pero para acceder al historial hacemos imc.users, no users.imc
+  @OneToMany(() => CalculoImc, (calculo) => calculo.user, { eager: false })
+  imcs: CalculoImc[];
 }
