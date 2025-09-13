@@ -30,9 +30,14 @@ export class UsersService {
   /* 
     Métodos que NO NECESITAN PERMANENCIA a través del repository
   */
-  async refreshToken(refreshToken: string) {
-    if (!refreshToken) throw new BadRequestException('El token de refresh es obligatorio.');
-    return this.jwtService.refreshToken(refreshToken);
+  async refreshToken(authHeader: string | undefined) {
+
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      throw new BadRequestException('El header Authorization es obligatorio, y en este caso tener el formato Bearer [refresh-token].');
+    }
+
+    const token = authHeader.split(' ')[1];
+    return this.jwtService.refreshToken(token); // ahora sí le pasás el token
   }
 
   /*
@@ -93,6 +98,6 @@ export class UsersService {
     const result = await this.userRepository.delete(id)
     if (!result) throw new UnauthorizedException();
     
-    return { message: 'Eliminado' }
+    return { message: 'Usuario ID N°' + id + ' eliminado.'  }
   }
 }

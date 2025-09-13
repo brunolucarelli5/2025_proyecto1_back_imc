@@ -12,14 +12,14 @@ import { TokenPairDTO } from '../dto/token-pair.dto';
 import { UserEntity } from '../entities/user.entity';
 
 
-@Controller('usuarios')
+@Controller('users')
 export class UsersController {
   constructor(private service: UsersService) {}
 
 
   /*
     EJEMPLO
-    /usuarios/yo es un endpoint de ejemplo creado para entender el concepto de Requests.
+    /users/me es un endpoint de ejemplo creado para entender el concepto de Requests.
     Las Requests en sí están explicadas en auth.guard, línea 55+
   */
   @UseGuards(AuthGuard)
@@ -42,13 +42,13 @@ export class UsersController {
   }
 
   //Este endpoint trabaja sobre el header, no sobre @Body, @Query, @Param, entonces NO necesita DTO.
-  //Al hacer /usuarios/login, 
-  @UseGuards(AuthGuard)
-  @Get('tokens')                         
-  refreshToken(@Req() request: Request){
-    return this.service.refreshToken(
-      request.headers['refresh-token'] as string,
-    );
+  //Este endpoint NO va protegido, porque es público.
+  
+  //El usuario hace login y obtiene un access y Refresh. El access se envía
+  //en cada request protegido con AuthGuard. Cuando el access expira, el frontend usa este endpoint
+  //para obtener un nuevo access, y si el refresh está por expirar, obtiene uno nuevo también. 
+  @Get('tokens') refreshToken(@Req() request: Request){ 
+    return this.service.refreshToken( request.headers['authorization'] );
   }
 
   /*
