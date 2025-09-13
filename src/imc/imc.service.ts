@@ -54,10 +54,6 @@ export class ImcService {
       },
     };
   }
-  //Ocultamos passwords, pero para los endpoints /historial - /pag
-  private formatoResponseHistorialArray(historial: CalculoImc[]): CalculoImcResponseDto[] {
-    return historial.map(this.formatoResponseHistorial);
-  }
 
   /*
     FUNCIONES LLAMADAS POR EL CONTROLLER
