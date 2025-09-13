@@ -14,3 +14,4 @@ export class CreateHistorialImcDto {
   @ApiProperty({ example: 'Bajo peso' })
   categoria: string; 
 }
+
