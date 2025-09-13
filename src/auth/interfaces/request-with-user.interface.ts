@@ -1,6 +1,6 @@
 // ARCHIVO: request-with-user.ts
 import { Request } from 'express';
-import { UserEntity } from '../entities/user.entity';
+import { UserEntity } from '../../users/entities/user.entity';
 
 /* 
     Una Request es un objeto generado por Express.js, que representa toda la petición HTTP realizada.

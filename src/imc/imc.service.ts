@@ -1,7 +1,7 @@
 //ARCHIVO: imc.service.ts
 
 //Imports del helper
-import { calcularIMC, redondearIMC } from "../helpers/imc.helper";
+import { calcularIMC, redondearIMC } from "./helpers/imc.helper";
 
 //Resto de imports
 import { Inject, Injectable } from "@nestjs/common";

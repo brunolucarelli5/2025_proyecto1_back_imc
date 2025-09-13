@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ImcController } from './imc.controller';
-import { ImcService } from './imc.service';
+import { ImcController } from './imc/imc.controller';
+import { ImcService } from './imc/imc.service';
 import { CalculoImcDto } from './dto/calculo-imc.dto';
 import { BadRequestException, ValidationPipe } from '@nestjs/common';
 

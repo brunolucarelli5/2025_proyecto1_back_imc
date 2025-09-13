@@ -1,5 +1,5 @@
 //ARCHIVO: users.repository.interface.ts
-import { UserEntity } from "src/auth/entities/user.entity";
+import { UserEntity } from "src/users/entities/user.entity";
 
 export interface IUserRepository {
     findByEmail(email: string): Promise<UserEntity | null>;

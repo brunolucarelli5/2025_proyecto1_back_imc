@@ -3,12 +3,16 @@
 import { Module } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { UsersController } from './users.controller';
-import { JwtModule } from 'src/auth/jwt/jwt.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { UserEntity } from '../entities/user.entity';
+import { UserEntity } from './entities/user.entity';
 import { UserRepository } from './repositories/users.repository';
+import { JwtModule } from 'src/auth/jwt/jwt.module';
 
 @Module({
+  imports: [
+    TypeOrmModule.forFeature([UserEntity]),
+    JwtModule   //Usado para AuthGuard
+  ],
   providers: [
     UsersService,
     {
@@ -16,7 +20,7 @@ import { UserRepository } from './repositories/users.repository';
       useClass: UserRepository,
     },
   ],
-  imports: [JwtModule, TypeOrmModule.forFeature([UserEntity])],
+  
   exports: [UsersService],
   controllers: [UsersController],
 })
