@@ -19,12 +19,14 @@ export class UsersController {
   @UseGuards(AuthGuard)
   @Get()
   findAll(): Promise<UserResponseDto[]> {
+    console.log("Obteniendo todos los ususarios")
     return this.service.findAll();
   }
 
   @ApiOperation({ summary: 'Registra un nuevo usuario' })
   @Post('register')
   register(@Body() body: RegisterDTO): Promise<UserResponseDto> {
+    console.log('Registrando nuevo usuario')
     return this.service.register(body);
   }
 
@@ -33,6 +35,7 @@ export class UsersController {
   @UseGuards(AuthGuard)
   @Patch('/:id')
   update(@Param('id', ParseIntPipe) id: number, @Body() body: UpdateUserDTO): Promise<UserResponseDto> {
+    console.log('Actualizando usuario')
     return this.service.update(id, body);
   }
 
@@ -41,6 +44,7 @@ export class UsersController {
   @UseGuards(AuthGuard)
   @Delete('/:id')
   delete(@Param('id', ParseIntPipe) id: number): Promise<MessageResponseDTO> {
+    console.log('Eliminando usuario')
     return this.service.delete(id);
   }
 }

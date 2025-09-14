@@ -21,6 +21,7 @@ export class AuthController {
   @ApiResponse({ status: 200, description: 'Tokens renovados' })
   @Get('tokens') 
   tokens(@RefreshToken() token: string){ 
+    console.log('Generando nuevos tokens')
     return this.service.tokens(token);
   }
 
@@ -28,6 +29,7 @@ export class AuthController {
   @ApiResponse({ status: 201, description: 'Access y Refresh tokens generados correctamente' })
   @Post('login')
   login(@Body() body: LoginDTO): Promise<TokenPairDTO> {
+    console.log('Logueando al usuario ' + body.email)
     return this.service.login(body);
   }
 
