@@ -6,6 +6,7 @@ import { AuthService } from './auth.service';
 import { JwtModule } from './jwt/jwt.module';
 import { UsersModule } from 'src/users/users.module';
 import { AuthGuard } from './guards/auth.guard';
+import { JwtService } from '@nestjs/jwt';
 
 @Module({
   imports: [
@@ -15,7 +16,8 @@ import { AuthGuard } from './guards/auth.guard';
   controllers: [AuthController],
   providers: [
     AuthService, 
-    AuthGuard
+    AuthGuard,
+    JwtService,
   ],
   exports: [
     AuthGuard,    //Exportamos AuthGuard porque lo usamos en imc

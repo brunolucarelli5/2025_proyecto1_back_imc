@@ -1,22 +1,39 @@
 //ARCHIVO: jwt.service.ts
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, UnauthorizedException } from '@nestjs/common';
 import { sign, verify } from 'jsonwebtoken';
 import { Payload } from '../interfaces/payload.interface';
+import { ConfigService } from '@nestjs/config';
+import { JwtConfigTokens } from '../interfaces/jwt-config.interface';
 
 @Injectable()
 export class JwtService {
 
-  //config.ts
-  config = {
+  //Creamos una config vacía con 2 tokens, los cuales tendrán c/u un secret y un expiresIn.
+  private readonly config: JwtConfigTokens;
+
+  //Cargamos la config con los datos del .env. Si falta alguno, damos error.
+  constructor(private readonly configService: ConfigService) {
+    const accessSecret = this.configService.get<string>('jwt.access.secret');
+    const accessExpiresIn = this.configService.get<string>('jwt.access.expiresIn');
+    const refreshSecret = this.configService.get<string>('jwt.refresh.secret');
+    const refreshExpiresIn = this.configService.get<string>('jwt.refresh.expiresIn');
+
+    if (!accessSecret || !accessExpiresIn || !refreshSecret || !refreshExpiresIn) {
+      throw new InternalServerErrorException('Faltan variables de entorno JWT en el archivo .env');
+    }
+
+    this.config = {
       access: {
-        secret: "accessSecret",
-        expiresIn: "15m",
+        secret: accessSecret,
+        expiresIn: accessExpiresIn,
       },
       refresh: {
-        secret: "refreshSecret",
-        expiresIn: "1d",
+        secret: refreshSecret,
+        expiresIn: refreshExpiresIn,
       },
     };
+  }
+
   
   generateToken(payload: Payload, type: 'refresh' | 'access' = 'access'): string {
     //El método sign() toma un payload y lo firma con un secreto. Le añade además exp, iat, etc. 
