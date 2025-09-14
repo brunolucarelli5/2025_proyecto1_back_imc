@@ -43,9 +43,10 @@ export class AuthController {
   @Get('me')
   me(@Req() req: RequestWithUser) {
     return {
-      nombre: req.user.firstName,
-      apellido: req.user.lastName,
-      email: req.user.email
+      id: req.user.id,
+      email: req.user.email,
+      firstName: req.user.firstName,
+      lastName: req.user.lastName
     }
   }
 
