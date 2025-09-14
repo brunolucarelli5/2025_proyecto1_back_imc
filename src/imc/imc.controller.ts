@@ -8,8 +8,8 @@ import { CalculoImc } from './entities/CalculoImc.entity';
 import { SortValidationPipe } from './pipes/sort-validation.pipe';
 import { ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { PaginacionResponseDto } from './dto/paginacion-response.dto';
-import { AuthGuard } from 'src/auth/guards/auth.guard';
-import { RequestWithUser } from 'src/auth/interfaces/request-with-user.interface';
+import { AuthGuard } from '../auth/guards/auth.guard';
+import { RequestWithUser } from '../auth/interfaces/request-with-user.interface';
 import { CalculoImcResponseDto } from './dto/calculo-imc-response.dto';
 
 

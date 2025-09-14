@@ -6,12 +6,12 @@ import { UsersController } from './users.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UserEntity } from './entities/user.entity';
 import { UserRepository } from './repositories/users.repository';
-import { JwtModule } from 'src/auth/jwt/jwt.module';
+import { JwtModule } from '../auth/jwt/jwt.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([UserEntity]),
-    JwtModule   //Usado para AuthGuard
+    JwtModule, //Usado para AuthGuard
   ],
   providers: [
     UsersService,
@@ -20,7 +20,7 @@ import { JwtModule } from 'src/auth/jwt/jwt.module';
       useClass: UserRepository,
     },
   ],
-  
+
   exports: [UsersService],
   controllers: [UsersController],
 })

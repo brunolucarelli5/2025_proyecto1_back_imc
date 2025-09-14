@@ -1,5 +1,5 @@
 //ARCHIVO: imc.entity.ts
-import { UserEntity } from 'src/users/entities/user.entity';
+import { UserEntity } from '../../users/entities/user.entity';
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne} from 'typeorm';
 
 @Entity('calculoimc')

@@ -3,7 +3,7 @@ import { Injectable, InternalServerErrorException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 
-import { UserEntity } from "src/users/entities/user.entity";
+import { UserEntity } from "../entities/user.entity";
 import { IUserRepository } from "./users.repository.interface";
 
 @Injectable()

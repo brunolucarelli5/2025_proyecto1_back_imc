@@ -1,5 +1,5 @@
 import { Exclude } from 'class-transformer';
-import { CalculoImc } from 'src/imc/entities/CalculoImc.entity';
+import { CalculoImc } from '../../imc/entities/CalculoImc.entity';
 import { BaseEntity, Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 
 /*
