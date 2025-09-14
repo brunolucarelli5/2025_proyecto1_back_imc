@@ -1,19 +1,28 @@
 //ARCHIVO: auth.controller.ts
-
-import { Controller, Post, Body, Get, Req, UseGuards } from '@nestjs/common';
+import { Controller, Post, Body, Get, Req, UseGuards} from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LoginDTO } from './dto/login.dto';
 import { TokenPairDTO } from './dto/token-pair.dto';
-import { Request } from 'express';
 import { AuthGuard } from './guards/auth.guard';
 import { RequestWithUser } from './interfaces/request-with-user.interface';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { RefreshToken } from './decorators/refresh-token.decorator';
 
 @ApiTags('Auth') // Agrupa en Swagger
 @Controller('auth')
 export class AuthController {
   constructor(private readonly service: AuthService) {}
 
+  /*
+    → Este endpoint trabaja sobre el header, no sobre @Body, @Query, @Param, entonces NO necesita DTO.
+    → Este endpoint NO va protegido con AuthGuard, porque es público (ver summary)
+  */
+  @ApiOperation({ summary: 'Cuando el access expira, el frontend usa este endpoint para, a través de un refresh token, obtener un nuevo access. Si el refresh también está por expirar, obtiene un nuevo access y un nuevo refresh.' })
+  @ApiResponse({ status: 200, description: 'Tokens renovados' })
+  @Get('tokens') 
+  tokens(@RefreshToken() token: string){ 
+    return this.service.tokens(token);
+  }
 
   @ApiOperation({ summary: 'Inicia sesión y obtiene tokens' })
   @ApiResponse({ status: 201, description: 'Access y Refresh tokens generados correctamente' })
@@ -23,18 +32,8 @@ export class AuthController {
   }
 
   /*
-    → Este endpoint trabaja sobre el header, no sobre @Body, @Query, @Param, entonces NO necesita DTO.
-    → Este endpoint NO va protegido, porque es público.
-  */
-  @ApiOperation({ summary: 'Cuando el access expira, el frontend usa este endpoint para, a través de un refresh token, obtener un nuevo access. Si el refresh también está por expirar, obtiene un nuevo access y un nuevo refresh.' })
-  @ApiResponse({ status: 200, description: 'Tokens renovados' })
-  @Get('tokens') refreshToken(@Req() request: Request){ 
-    return this.service.refreshToken( request.headers['authorization'] );
-  }
-
-  /*
     EJEMPLO
-    /users/me es un endpoint de ejemplo creado para entender el concepto de Requests.
+    /users/me es un endpoint de ejemplo creado para entender AuthGuard y el concepto de Requests.
     Las Requests en sí están explicadas en auth.guard, línea 55+
   */
   @ApiBearerAuth()

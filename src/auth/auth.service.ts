@@ -15,13 +15,8 @@ export class AuthService {
   ) {}
 
 
-  async refreshToken(authHeader: string | undefined) {
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      throw new BadRequestException('El header Authorization es obligatorio, y en este caso tener el formato Bearer [refresh-token].');
-    }
-
-    const token = authHeader.split(' ')[1];
-    return this.jwtService.refreshToken(token); // ahora sí le pasás el token
+  async tokens(token: string) {
+    return this.jwtService.refreshToken(token); //Obtenemos nuevos access y/o refresh del jwtService
   }
 
   async login(body: LoginDTO): Promise<TokenPairDTO> {
