@@ -45,7 +45,7 @@ export class AuthGuard implements CanActivate {
         necesitemos. En este caso, definimos las partes del payload en la interfaz "payload.ts",
         la cual es devuelta por el método getPayload().        
       */
-      const payload = this.jwtService.getPayload(token) //El método getPayload le dice a TS 
+      const payload = this.jwtService.getPayload(token)
       const user = await this.usersService.findByEmail(payload.email);
 
       if (!user) {
@@ -53,7 +53,7 @@ export class AuthGuard implements CanActivate {
       }
 
       /* 
-        Arriba revisamos que el que el payload tnega el campo email, en base al email identificamos 
+        Arriba revisamos que el que el payload tenga el campo email, en base al email identificamos 
         el usuario, si el usuario existe anexamos el usuario al Request.
       
         El objeto Request de Express viaja por toda la peticicón. Esta línea parece innecesaria,

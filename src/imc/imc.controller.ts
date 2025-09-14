@@ -27,6 +27,7 @@ export class ImcController {
     @Body(ValidationPipe) data: CalculoImcDto,
     @Req() req: RequestWithUser
   ): Promise<CalculoImcResponseDto> {
+    console.log('Calculando IMC')
     return this.imcService.calcularImc(data, req.user);
   }
 
@@ -38,6 +39,7 @@ export class ImcController {
     @Query('sort', new SortValidationPipe()) sort: 'asc' | 'desc' = 'desc',
     @Req() req: RequestWithUser
   ): Promise<CalculoImc[]> {
+    console.log('Obteniendo historial de IMC para '+ req.user.email)
     return this.imcService.findAllSorted(sort, req.user.id);
   }
 
@@ -51,6 +53,7 @@ export class ImcController {
     @Query('sort', new SortValidationPipe()) sort: 'asc' | 'desc' = 'desc',
     @Req() req: RequestWithUser
   ): Promise<PaginacionResponseDto> {
+    console.log('Obteniendo paginación de historial IMC para usuario ' + req.user.email)
     return this.imcService.findPag(paginacion, sort, req.user.id);
   }
 

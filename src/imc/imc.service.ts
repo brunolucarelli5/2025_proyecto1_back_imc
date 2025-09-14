@@ -48,7 +48,8 @@ export class ImcService {
       categoria: calculoImc.categoria,
       fecha_calculo: calculoImc.fecha_calculo,
       user: {
-        id: calculoImc.user.id,                
+        id: calculoImc.user.id,   
+        email: calculoImc.user.email,             
         firstName: calculoImc.user.firstName,
         lastName: calculoImc.user.lastName,
       },
