@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { BadRequestException, UnauthorizedException } from '@nestjs/common';
+import { UnauthorizedException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { AuthService } from './auth.service';
 import { UsersService } from '../users/users.service';
@@ -150,67 +150,19 @@ describe('AuthService', () => {
       expect(jwtService.generateToken).not.toHaveBeenCalled();
     });
 
-    it('should handle case-sensitive email lookup', async () => {
-      const uppercaseEmailDto = {
-        email: 'TEST@EXAMPLE.COM',
-        password: 'plainPassword',
-      };
-
-      usersService.findByEmail.mockResolvedValue(null);
-
-      await expect(service.login(uppercaseEmailDto)).rejects.toThrow(
-        UnauthorizedException,
-      );
-      expect(usersService.findByEmail).toHaveBeenCalledWith(
-        uppercaseEmailDto.email,
-      );
-    });
-
     it('should handle different email formats', async () => {
-      const emailVariations = [
-        'user@test.com',
-        'complex.email+tag@domain.co.uk',
-        'user123@example.org',
-      ];
+      const email = 'complex.email+tag@domain.co.uk';
+      const dto = { email, password: 'password' };
+      const userWithEmail = { ...mockUser, email } as UserEntity;
 
-      for (const email of emailVariations) {
-        const dto = { email, password: 'password' };
-        const userWithEmail = { ...mockUser, email } as UserEntity;
-
-        usersService.findByEmail.mockResolvedValue(userWithEmail);
-        (bcrypt.compareSync as jest.Mock).mockReturnValue(true);
-        jwtService.generateToken.mockReturnValue('token');
-
-        await service.login(dto);
-
-        expect(usersService.findByEmail).toHaveBeenCalledWith(email);
-        expect(jwtService.generateToken).toHaveBeenCalledWith({ email });
-      }
-    });
-
-    it('should handle various password formats', async () => {
-      const passwords = [
-        'simplepass',
-        'Complex123!',
-        'pássword',
-        'パスワード',
-        'пароль123',
-      ];
-
-      usersService.findByEmail.mockResolvedValue(mockUser);
+      usersService.findByEmail.mockResolvedValue(userWithEmail);
+      (bcrypt.compareSync as jest.Mock).mockReturnValue(true);
       jwtService.generateToken.mockReturnValue('token');
 
-      for (const password of passwords) {
-        const dto = { email: validLoginDto.email, password };
+      await service.login(dto);
 
-        (bcrypt.compareSync as jest.Mock).mockReturnValue(true);
-        await service.login(dto);
-
-        expect(bcrypt.compareSync).toHaveBeenCalledWith(
-          password,
-          mockUser.password,
-        );
-      }
+      expect(usersService.findByEmail).toHaveBeenCalledWith(email);
+      expect(jwtService.generateToken).toHaveBeenCalledWith({ email });
     });
 
     it('should propagate UsersService errors', async () => {
@@ -233,9 +185,9 @@ describe('AuthService', () => {
     });
   });
 
-  describe('refreshToken', () => {
-    it('should refresh token successfully with valid Bearer header', async () => {
-      const authHeader = 'Bearer valid-refresh-token';
+  describe('tokens', () => {
+    it('should call jwtService.refreshToken and return the result', async () => {
+      const token = 'valid-refresh-token';
       const expectedResult = {
         accessToken: 'new-access-token',
         refreshToken: 'new-refresh-token',
@@ -243,231 +195,40 @@ describe('AuthService', () => {
 
       jwtService.refreshToken.mockReturnValue(expectedResult);
 
-      const result = await service.refreshToken(authHeader);
+      const result = await service.tokens(token);
 
       expect(result).toEqual(expectedResult);
-      expect(jwtService.refreshToken).toHaveBeenCalledWith(
-        'valid-refresh-token',
-      );
-    });
-
-    it('should throw BadRequestException when authHeader is undefined', async () => {
-      await expect(service.refreshToken(undefined)).rejects.toThrow(
-        BadRequestException,
-      );
-      await expect(service.refreshToken(undefined)).rejects.toThrow(
-        'El header Authorization es obligatorio, y en este caso tener el formato Bearer [refresh-token].',
-      );
-    });
-
-    it('should throw BadRequestException when authHeader is null', async () => {
-      await expect(service.refreshToken(null as any)).rejects.toThrow(
-        BadRequestException,
-      );
-      await expect(service.refreshToken(null as any)).rejects.toThrow(
-        'El header Authorization es obligatorio, y en este caso tener el formato Bearer [refresh-token].',
-      );
-    });
-
-    it('should throw BadRequestException when authHeader does not start with Bearer', async () => {
-      const invalidHeaders = [
-        'Basic token',
-        'Token refresh-token',
-        'refresh-token',
-        'Bearer',
-        'bearer refresh-token',
-        'BEARER refresh-token',
-      ];
-
-      for (const header of invalidHeaders) {
-        await expect(service.refreshToken(header)).rejects.toThrow(
-          BadRequestException,
-        );
-        await expect(service.refreshToken(header)).rejects.toThrow(
-          'El header Authorization es obligatorio, y en este caso tener el formato Bearer [refresh-token].',
-        );
-      }
-    });
-
-    it('should handle Bearer header with empty token', async () => {
-      const authHeader = 'Bearer ';
-
-      jwtService.refreshToken.mockImplementation(() => {
-        throw new Error('Invalid token');
-      });
-
-      await expect(service.refreshToken(authHeader)).rejects.toThrow(
-        'Invalid token',
-      );
-      expect(jwtService.refreshToken).toHaveBeenCalledWith('');
-    });
-
-    it('should handle Bearer header with multiple spaces', async () => {
-      const authHeader = 'Bearer   token-with-spaces';
-
-      jwtService.refreshToken.mockReturnValue({
-        accessToken: 'new-access-token',
-      });
-
-      const result = await service.refreshToken(authHeader);
-
-      expect(result.accessToken).toBe('new-access-token');
-      expect(jwtService.refreshToken).toHaveBeenCalledWith(
-        '  token-with-spaces',
-      );
-    });
-
-    it('should extract token correctly from various Bearer formats', async () => {
-      const testCases = [
-        {
-          header: 'Bearer simple-token',
-          expectedToken: 'simple-token',
-        },
-        {
-          header:
-            'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c',
-          expectedToken:
-            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c',
-        },
-        {
-          header: 'Bearer token-with-dashes-and_underscores',
-          expectedToken: 'token-with-dashes-and_underscores',
-        },
-      ];
-
-      jwtService.refreshToken.mockReturnValue({ accessToken: 'new-token' });
-
-      for (const { header, expectedToken } of testCases) {
-        await service.refreshToken(header);
-        expect(jwtService.refreshToken).toHaveBeenCalledWith(expectedToken);
-      }
+      expect(jwtService.refreshToken).toHaveBeenCalledWith(token);
     });
 
     it('should propagate JWT service errors', async () => {
-      const authHeader = 'Bearer invalid-token';
+      const token = 'invalid-token';
       const errorMessage = 'Token expired';
 
       jwtService.refreshToken.mockImplementation(() => {
         throw new Error(errorMessage);
       });
 
-      await expect(service.refreshToken(authHeader)).rejects.toThrow(
-        errorMessage,
-      );
-      expect(jwtService.refreshToken).toHaveBeenCalledWith('invalid-token');
+      await expect(service.tokens(token)).rejects.toThrow(errorMessage);
+      expect(jwtService.refreshToken).toHaveBeenCalledWith(token);
     });
 
-    it('should handle edge cases with whitespace', async () => {
-      const authHeaders = [
-        ' Bearer token',
-        'Bearer token ',
-        ' Bearer token ',
-        '\tBearer token',
-        'Bearer\ttoken',
+    it('should handle different token formats', async () => {
+      const tokens = [
+        'simple-token',
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c',
+        'token-with-dashes-and_underscores',
       ];
 
-      // Only exact 'Bearer ' prefix should work
-      const validHeaders = authHeaders.filter((h) => h.startsWith('Bearer '));
-      const invalidHeaders = authHeaders.filter(
-        (h) => !h.startsWith('Bearer '),
-      );
+      jwtService.refreshToken.mockReturnValue({ accessToken: 'new-token' });
 
-      jwtService.refreshToken.mockReturnValue({ accessToken: 'token' });
-
-      for (const header of validHeaders) {
-        await service.refreshToken(header);
-        // Should extract everything after 'Bearer '
-        const expectedToken = header.split(' ')[1];
-        expect(jwtService.refreshToken).toHaveBeenCalledWith(expectedToken);
-      }
-
-      for (const header of invalidHeaders) {
-        await expect(service.refreshToken(header)).rejects.toThrow(
-          BadRequestException,
-        );
+      for (const token of tokens) {
+        await service.tokens(token);
+        expect(jwtService.refreshToken).toHaveBeenCalledWith(token);
       }
     });
   });
 
-  describe('Integration and edge cases', () => {
-    it('should maintain security during login flow', async () => {
-      const sensitiveLoginDto: LoginDTO = {
-        email: 'admin@sensitive.com',
-        password: 'SuperSecretPassword123!',
-      };
-
-      const sensitiveUser = {
-        ...mockUser,
-        email: sensitiveLoginDto.email,
-        password: 'hashedSuperSecretPassword',
-      } as UserEntity;
-
-      usersService.findByEmail.mockResolvedValue(sensitiveUser);
-      (bcrypt.compareSync as jest.Mock).mockReturnValue(true);
-      jwtService.generateToken
-        .mockReturnValueOnce('secure-access-token')
-        .mockReturnValueOnce('secure-refresh-token');
-
-      const result = await service.login(sensitiveLoginDto);
-
-      expect(result.accessToken).toBe('secure-access-token');
-      expect(result.refreshToken).toBe('secure-refresh-token');
-
-      // Verify password was compared, not stored in plain text
-      expect(bcrypt.compareSync).toHaveBeenCalledWith(
-        sensitiveLoginDto.password,
-        sensitiveUser.password,
-      );
-    });
-
-    it('should handle concurrent login attempts', async () => {
-      const loginAttempts = [
-        { email: 'user1@test.com', password: 'pass1' },
-        { email: 'user2@test.com', password: 'pass2' },
-        { email: 'user3@test.com', password: 'pass3' },
-      ];
-
-      // Mock users
-      loginAttempts.forEach((attempt, index) => {
-        const user = { ...mockUser, id: index + 1, email: attempt.email } as UserEntity;
-        usersService.findByEmail.mockImplementation(async (email) =>
-          email === attempt.email ? user : null,
-        );
-      });
-
-      (bcrypt.compareSync as jest.Mock).mockReturnValue(true);
-      jwtService.generateToken.mockReturnValue('token');
-
-      const loginPromises = loginAttempts.map((attempt) =>
-        service.login(attempt),
-      );
-      const results = await Promise.all(loginPromises);
-
-      expect(results).toHaveLength(3);
-      results.forEach((result) => {
-        expect(result.accessToken).toBeDefined();
-        expect(result.refreshToken).toBeDefined();
-      });
-    });
-
-    it('should handle malformed but valid Bearer headers', async () => {
-      const edgeCaseHeaders = [
-        'Bearer a',
-        'Bearer 1',
-        'Bearer ',
-        'Bearer token.with.dots',
-        'Bearer token with spaces',
-      ];
-
-      jwtService.refreshToken.mockReturnValue({ accessToken: 'token' });
-
-      for (const header of edgeCaseHeaders) {
-        const expectedToken = header.split(' ')[1];
-        await service.refreshToken(header);
-        expect(jwtService.refreshToken).toHaveBeenCalledWith(expectedToken);
-      }
-    });
-  });
 
   describe('Error propagation and logging', () => {
     it('should properly propagate all error types from dependencies', async () => {

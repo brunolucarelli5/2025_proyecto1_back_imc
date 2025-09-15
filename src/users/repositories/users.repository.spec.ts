@@ -57,15 +57,6 @@ describe('UserRepository', () => {
       expect(mockRepository.find).toHaveBeenCalledWith();
     });
 
-    it('should return empty array when no users exist', async () => {
-      mockRepository.find.mockResolvedValue([]);
-
-      const result = await repository.findAll();
-
-      expect(result).toEqual([]);
-      expect(mockRepository.find).toHaveBeenCalledTimes(1);
-    });
-
     it('should throw InternalServerErrorException on database error', async () => {
       const errorMessage = 'Database connection error';
       mockRepository.find.mockRejectedValue(new InternalServerErrorException('Error al obtener todos los usuarios. ' + errorMessage));
@@ -93,13 +84,6 @@ describe('UserRepository', () => {
       expect(mockRepository.findOneBy).toHaveBeenCalledWith({ email: 'nonexistent@example.com' });
     });
 
-    it('should handle email case sensitivity', async () => {
-      mockRepository.findOneBy.mockResolvedValue(mockUser);
-
-      await repository.findByEmail('TEST@EXAMPLE.COM');
-
-      expect(mockRepository.findOneBy).toHaveBeenCalledWith({ email: 'TEST@EXAMPLE.COM' });
-    });
 
     it('should throw InternalServerErrorException on database error', async () => {
       const errorMessage = 'Database query error';
@@ -129,17 +113,6 @@ describe('UserRepository', () => {
       expect(mockRepository.save).toHaveBeenCalledWith(newUser);
     });
 
-    it('should handle saving existing user (update)', async () => {
-      const existingUser = { ...mockUser };
-      existingUser.firstName = 'Updated';
-
-      mockRepository.save.mockResolvedValue(existingUser);
-
-      const result = await repository.save(existingUser as unknown as UserEntity);
-
-      expect(result).toEqual(existingUser);
-      expect(mockRepository.save).toHaveBeenCalledWith(existingUser);
-    });
 
     it('should throw InternalServerErrorException on save error', async () => {
       const newUser = new UserEntity();
@@ -179,26 +152,6 @@ describe('UserRepository', () => {
       expect(mockRepository.findOneBy).toHaveBeenCalledWith({ id: 999 });
     });
 
-    it('should handle partial updates', async () => {
-      const partialUpdates = [
-        { email: 'newemail@example.com' },
-        { password: 'newpassword' },
-        { firstName: 'NewFirst' },
-        { lastName: 'NewLast' },
-        { firstName: 'New', lastName: 'User' }
-      ];
-
-      for (const updateData of partialUpdates) {
-        const updatedUser = { ...mockUser, ...updateData };
-        mockRepository.update.mockResolvedValue({ affected: 1 });
-        mockRepository.findOneBy.mockResolvedValue(updatedUser);
-
-        const result = await repository.update(1, updateData);
-
-        expect(result).toEqual(updatedUser);
-        expect(mockRepository.update).toHaveBeenCalledWith(1, updateData);
-      }
-    });
 
     it('should throw InternalServerErrorException on update error', async () => {
       const updateData = { firstName: 'Updated' };

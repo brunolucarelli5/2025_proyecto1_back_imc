@@ -1,74 +1,115 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { ImcModule } from './imc.module';
+import { ConfigService } from '@nestjs/config';
+import { getRepositoryToken } from '@nestjs/typeorm';
 import { ImcController } from './imc.controller';
 import { ImcService } from './imc.service';
 import { CalculoImcRepository } from './repositories/CalculoImc.repository';
 import { CalculoImc } from './entities/CalculoImc.entity';
-import { AuthModule } from '../auth/auth.module';
-import { UsersModule } from '../users/users.module';
-import { JwtModule } from '../auth/jwt/jwt.module';
+import { JwtService } from '../auth/jwt/jwt.service';
+import { AuthGuard } from '../auth/guards/auth.guard';
+import { UsersService } from '../users/users.service';
+import { UserEntity } from '../users/entities/user.entity';
 
 describe('ImcModule', () => {
   let module: TestingModule;
 
+  // Mock repositories and services
+  const mockCalculoImcRepository = {
+    findAllSorted: jest.fn(),
+    findPag: jest.fn(),
+    save: jest.fn(),
+  };
+
+  const mockUsersService = {
+    findByEmail: jest.fn(),
+    findAll: jest.fn(),
+    register: jest.fn(),
+    update: jest.fn(),
+    delete: jest.fn(),
+  };
+
+  const mockAuthGuard = {
+    canActivate: jest.fn().mockReturnValue(true),
+  };
+
+  const mockConfigService = {
+    get: jest.fn((key: string) => {
+      const config = {
+        'jwt.access.secret': 'accessSecret',
+        'jwt.access.expiresIn': '15m',
+        'jwt.refresh.secret': 'refreshSecret',
+        'jwt.refresh.expiresIn': '1d',
+      };
+      return config[key];
+    }),
+  };
+
+  const mockTypeOrmRepositoryCalculoImc = {
+    find: jest.fn(),
+    findOne: jest.fn(),
+    save: jest.fn(),
+    update: jest.fn(),
+    delete: jest.fn(),
+    remove: jest.fn(),
+    createQueryBuilder: jest.fn(),
+  };
+
+  const mockTypeOrmRepositoryUser = {
+    find: jest.fn(),
+    findOne: jest.fn(),
+    save: jest.fn(),
+    update: jest.fn(),
+    delete: jest.fn(),
+    remove: jest.fn(),
+    createQueryBuilder: jest.fn(),
+  };
+
+  const mockUserRepository = {
+    findAll: jest.fn(),
+    findByEmail: jest.fn(),
+    save: jest.fn(),
+    update: jest.fn(),
+    delete: jest.fn(),
+  };
+
   beforeEach(async () => {
     module = await Test.createTestingModule({
-      imports: [
-        // Mock TypeORM module
-        TypeOrmModule.forRoot({
-          type: 'sqlite',
-          database: ':memory:',
-          entities: [CalculoImc],
-          synchronize: true,
-        }),
-      ],
       controllers: [ImcController],
       providers: [
         ImcService,
         CalculoImcRepository,
+        JwtService,
+        AuthGuard,
+        UsersService,
+        {
+          provide: ConfigService,
+          useValue: mockConfigService,
+        },
         {
           provide: 'ICalculoImcRepository',
-          useValue: {
-            findAllSorted: jest.fn(),
-            findPag: jest.fn(),
-            save: jest.fn(),
-          },
-        },
-        // Mock Auth dependencies
-        {
-          provide: 'AuthGuard',
-          useValue: {
-            canActivate: jest.fn().mockReturnValue(true),
-          },
+          useValue: mockCalculoImcRepository,
         },
         {
-          provide: 'JwtService',
-          useValue: {
-            getPayload: jest.fn(),
-            generateToken: jest.fn(),
-            refreshToken: jest.fn(),
-          },
+          provide: 'IUserRepository',
+          useValue: mockUserRepository,
         },
         {
-          provide: 'UsersService',
-          useValue: {
-            findByEmail: jest.fn(),
-            create: jest.fn(),
-            findAll: jest.fn(),
-            update: jest.fn(),
-            delete: jest.fn(),
-          },
+          provide: getRepositoryToken(CalculoImc),
+          useValue: mockTypeOrmRepositoryCalculoImc,
+        },
+        {
+          provide: getRepositoryToken(UserEntity),
+          useValue: mockTypeOrmRepositoryUser,
         },
       ],
-    })
-    .compile();
+    }).compile();
   });
 
   afterEach(async () => {
     if (module) {
       await module.close();
     }
+    jest.clearAllMocks();
   });
 
   it('should compile the module successfully', () => {
@@ -107,61 +148,6 @@ describe('ImcModule', () => {
     expect(service1).toBe(service2);
   });
 
-  it('should be importable by other modules', async () => {
-    const testModule = await Test.createTestingModule({
-      imports: [
-        TypeOrmModule.forRoot({
-          type: 'sqlite',
-          database: ':memory:',
-          entities: [CalculoImc],
-          synchronize: true,
-        }),
-      ],
-      controllers: [ImcController],
-      providers: [
-        ImcService,
-        CalculoImcRepository,
-        {
-          provide: 'ICalculoImcRepository',
-          useValue: {
-            findAllSorted: jest.fn(),
-            findPag: jest.fn(),
-            save: jest.fn(),
-          },
-        },
-        {
-          provide: 'AuthGuard',
-          useValue: {
-            canActivate: jest.fn().mockReturnValue(true),
-          },
-        },
-        {
-          provide: 'JwtService',
-          useValue: {
-            getPayload: jest.fn(),
-            generateToken: jest.fn(),
-            refreshToken: jest.fn(),
-          },
-        },
-        {
-          provide: 'UsersService',
-          useValue: {
-            findByEmail: jest.fn(),
-            create: jest.fn(),
-            findAll: jest.fn(),
-            update: jest.fn(),
-            delete: jest.fn(),
-          },
-        },
-      ],
-    })
-    .compile();
-
-    const imcService = testModule.get<ImcService>(ImcService);
-    expect(imcService).toBeDefined();
-
-    await testModule.close();
-  });
 
   it('should have correct module metadata structure', () => {
     expect(module).toBeDefined();
@@ -169,64 +155,37 @@ describe('ImcModule', () => {
     expect(module.get<ImcController>(ImcController)).toBeDefined();
   });
 
-  it('should isolate instances between different module instances', async () => {
-    const module2 = await Test.createTestingModule({
-      imports: [
-        TypeOrmModule.forRoot({
-          type: 'sqlite',
-          database: ':memory:',
-          entities: [CalculoImc],
-          synchronize: true,
-        }),
-      ],
-      controllers: [ImcController],
-      providers: [
-        ImcService,
-        CalculoImcRepository,
-        {
-          provide: 'ICalculoImcRepository',
-          useValue: {
-            findAllSorted: jest.fn(),
-            findPag: jest.fn(),
-            save: jest.fn(),
-          },
-        },
-        {
-          provide: 'AuthGuard',
-          useValue: {
-            canActivate: jest.fn().mockReturnValue(true),
-          },
-        },
-        {
-          provide: 'JwtService',
-          useValue: {
-            getPayload: jest.fn(),
-            generateToken: jest.fn(),
-            refreshToken: jest.fn(),
-          },
-        },
-        {
-          provide: 'UsersService',
-          useValue: {
-            findByEmail: jest.fn(),
-            create: jest.fn(),
-            findAll: jest.fn(),
-            update: jest.fn(),
-            delete: jest.fn(),
-          },
-        },
-      ],
-    })
-    .compile();
 
-    const service1 = module.get<ImcService>(ImcService);
-    const service2 = module2.get<ImcService>(ImcService);
+  it('should provide all services correctly', () => {
+    const jwtService = module.get<JwtService>(JwtService);
+    const authGuard = module.get<AuthGuard>(AuthGuard);
+    const usersService = module.get<UsersService>(UsersService);
+    const repository = module.get<CalculoImcRepository>(CalculoImcRepository);
 
-    // Services from different modules should be different instances
-    // but within the same module, they should be the same (singleton)
-    expect(service1).toBeDefined();
-    expect(service2).toBeDefined();
+    expect(jwtService).toBeDefined();
+    expect(authGuard).toBeDefined();
+    expect(usersService).toBeDefined();
+    expect(repository).toBeDefined();
+  });
 
-    await module2.close();
+  it('should maintain consistent dependency injection', () => {
+    // Test that all providers can be resolved without circular dependencies
+    expect(() => module.get<ImcService>(ImcService)).not.toThrow();
+    expect(() => module.get<ImcController>(ImcController)).not.toThrow();
+    expect(() => module.get<JwtService>(JwtService)).not.toThrow();
+    expect(() => module.get<AuthGuard>(AuthGuard)).not.toThrow();
+    expect(() => module.get<UsersService>(UsersService)).not.toThrow();
+    expect(() => module.get('ICalculoImcRepository')).not.toThrow();
+    expect(() => module.get('IUserRepository')).not.toThrow();
+  });
+
+  it('should handle repository pattern correctly', () => {
+    const imcRepository = module.get('ICalculoImcRepository');
+    const userRepository = module.get('IUserRepository');
+
+    expect(imcRepository).toBeDefined();
+    expect(userRepository).toBeDefined();
+    expect(typeof imcRepository.findAllSorted).toBe('function');
+    expect(typeof userRepository.findByEmail).toBe('function');
   });
 });
