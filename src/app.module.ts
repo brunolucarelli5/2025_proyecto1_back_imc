@@ -29,7 +29,7 @@ import jwtConfig from './auth/jwt/jwt.config';
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_DATABASE'),
         entities: [CalculoImc],
-        synchronize: true,
+        synchronize: false,
         autoLoadEntities: true,
       }),
     }),
