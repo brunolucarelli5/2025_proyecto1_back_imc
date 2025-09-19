@@ -37,6 +37,6 @@ export class CalculoImc {
     Esto hace que si la consulta por defecto no necesitó de un usuario (es decir, no pasamos un ID
     de usuario, como sí lo hacemos en /calcular), entonces no se muestra el usuario.
   */
-  @ManyToOne(() => UserEntity, (user) => user.imcs, { eager: false })   //Un user tiene muchos cálculos.
-  user: UserEntity;                                                     //Un cálculo tiene un user.
+  @ManyToOne(() => UserEntity, (user) => user.imcs, { eager: false, onDelete: 'CASCADE'})   //Un user tiene muchos cálculos.
+  user: UserEntity;                                                 //Un cálculo tiene un user.
 }
