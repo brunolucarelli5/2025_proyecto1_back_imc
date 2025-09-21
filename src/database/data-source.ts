@@ -8,9 +8,9 @@ import { CalculoImc } from '../imc/entities/CalculoImc.entity';
 config();
 
 export const AppDataSource = new DataSource({
-  type: 'mysql',
+  type: 'postgres',                                   //CAMBIO: Nueva base de datos
   host: process.env.DB_HOST,
-  port: parseInt(process.env.DB_PORT || '3306', 10),
+  port: parseInt(process.env.DB_PORT || '5432', 10),  //CAMBIO: Puerto por defecto 
   username: process.env.DB_USERNAME,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_DATABASE,
