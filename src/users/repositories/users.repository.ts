@@ -31,6 +31,14 @@ export class UserRepository implements IUserRepository {
         }
     }
 
+    async findById(id: number): Promise<UserEntity | null> {
+        try {
+            return await this.repo.findOneBy({ id });
+        } catch (error) {
+            throw new InternalServerErrorException('Error al buscar usuario por ID. ' + error);
+        }
+    }
+
 
   async save(user: UserEntity): Promise<UserEntity> {
     try {
