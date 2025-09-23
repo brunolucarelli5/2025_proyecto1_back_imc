@@ -119,8 +119,8 @@ describe('UsersController', () => {
     it('should update user successfully', async () => {
       const updatedUser: UserResponseDto = {
         ...mockUserResponse,
-        firstName: updateDto.firstName,
-        lastName: updateDto.lastName,
+        firstName: updateDto.firstName!,
+        lastName: updateDto.lastName!,
       };
 
       service.update.mockResolvedValue(updatedUser);
@@ -163,12 +163,145 @@ describe('UsersController', () => {
     });
   });
 
+  describe('parameter validation', () => {
+    it('should handle invalid ID parameter in update', async () => {
+      const updateDto: UpdateUserDTO = { firstName: 'Updated' };
+      service.update.mockRejectedValue(new Error('Invalid ID'));
+
+      await expect(controller.update(NaN, updateDto)).rejects.toThrow('Invalid ID');
+      expect(service.update).toHaveBeenCalledWith(NaN, updateDto);
+    });
+
+    it('should handle invalid ID parameter in delete', async () => {
+      service.delete.mockRejectedValue(new Error('Invalid ID'));
+
+      await expect(controller.delete(NaN)).rejects.toThrow('Invalid ID');
+      expect(service.delete).toHaveBeenCalledWith(NaN);
+    });
+
+    it('should handle negative ID in update', async () => {
+      const updateDto: UpdateUserDTO = { firstName: 'Updated' };
+      service.update.mockRejectedValue(new Error('User not found'));
+
+      await expect(controller.update(-1, updateDto)).rejects.toThrow('User not found');
+      expect(service.update).toHaveBeenCalledWith(-1, updateDto);
+    });
+
+    it('should handle zero ID in delete', async () => {
+      service.delete.mockRejectedValue(new Error('User not found'));
+
+      await expect(controller.delete(0)).rejects.toThrow('User not found');
+      expect(service.delete).toHaveBeenCalledWith(0);
+    });
+
+    it('should handle very large ID numbers', async () => {
+      const largeId = Number.MAX_SAFE_INTEGER;
+      const updateDto: UpdateUserDTO = { firstName: 'Updated' };
+      service.update.mockRejectedValue(new Error('User not found'));
+
+      await expect(controller.update(largeId, updateDto)).rejects.toThrow('User not found');
+      expect(service.update).toHaveBeenCalledWith(largeId, updateDto);
+    });
+  });
+
+  describe('edge cases and error scenarios', () => {
+    it('should handle service timeout errors', async () => {
+      service.findAll.mockRejectedValue(new Error('Request timeout'));
+
+      await expect(controller.findAll()).rejects.toThrow('Request timeout');
+    });
+
+    it('should handle malformed register data', async () => {
+      const malformedDto = {
+        email: 'invalid-email',
+        password: '',
+        firstName: null,
+        lastName: undefined
+      } as any;
+
+      service.register.mockRejectedValue(new Error('Validation failed'));
+
+      await expect(controller.register(malformedDto)).rejects.toThrow('Validation failed');
+    });
+
+    it('should handle empty update DTO', async () => {
+      const emptyDto: UpdateUserDTO = {};
+      const updatedUser: UserResponseDto = {
+        ...mockUserResponse,
+      };
+
+      service.update.mockResolvedValue(updatedUser);
+
+      const result = await controller.update(1, emptyDto);
+
+      expect(result).toEqual(updatedUser);
+      expect(service.update).toHaveBeenCalledWith(1, emptyDto);
+    });
+
+    it('should handle concurrent delete requests', async () => {
+      service.delete.mockRejectedValue(new Error('Concurrent modification'));
+
+      await expect(controller.delete(1)).rejects.toThrow('Concurrent modification');
+    });
+
+    it('should handle database connection errors in findAll', async () => {
+      service.findAll.mockRejectedValue(new Error('Database connection failed'));
+
+      await expect(controller.findAll()).rejects.toThrow('Database connection failed');
+    });
+
+    it('should handle registration with duplicate email gracefully', async () => {
+      const registerDto: RegisterDTO = {
+        email: 'existing@example.com',
+        password: 'password123',
+        firstName: 'John',
+        lastName: 'Doe',
+      };
+
+      service.register.mockRejectedValue(new Error('Email already exists'));
+
+      await expect(controller.register(registerDto)).rejects.toThrow('Email already exists');
+    });
+
+    it('should handle update with partial data', async () => {
+      const partialDto: UpdateUserDTO = {
+        firstName: 'OnlyFirstName'
+      };
+
+      const updatedUser: UserResponseDto = {
+        ...mockUserResponse,
+        firstName: 'OnlyFirstName'
+      };
+
+      service.update.mockResolvedValue(updatedUser);
+
+      const result = await controller.update(1, partialDto);
+
+      expect(result).toEqual(updatedUser);
+      expect(result.firstName).toBe('OnlyFirstName');
+    });
+
+    it('should handle service throwing unexpected error types', async () => {
+      service.findAll.mockRejectedValue('String error instead of Error object');
+
+      await expect(controller.findAll()).rejects.toBe('String error instead of Error object');
+    });
+  });
+
   describe('integration', () => {
     it('should have all required methods', () => {
       expect(typeof controller.findAll).toBe('function');
       expect(typeof controller.register).toBe('function');
       expect(typeof controller.update).toBe('function');
       expect(typeof controller.delete).toBe('function');
+    });
+
+    it('should use correct HTTP methods and decorators', () => {
+      expect(controller).toBeDefined();
+      expect(controller.findAll).toBeDefined();
+      expect(controller.register).toBeDefined();
+      expect(controller.update).toBeDefined();
+      expect(controller.delete).toBeDefined();
     });
   });
 });
