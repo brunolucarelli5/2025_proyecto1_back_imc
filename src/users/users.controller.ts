@@ -15,7 +15,6 @@ export class UsersController {
 
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Lista todos los usuarios' })
-  @Get()
   @UseGuards(AuthGuard)
   @Get()
   findAll(): Promise<UserResponseDto[]> {
