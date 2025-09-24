@@ -11,6 +11,7 @@ import { PaginacionResponseDto } from './dto/paginacion-response.dto';
 import { AuthGuard } from '../auth/guards/auth.guard';
 import { RequestWithUser } from '../auth/interfaces/request-with-user.interface';
 import { CalculoImcResponseDto } from './dto/calculo-imc-response.dto';
+import { DashboardResponseDto } from './dto/dashboard/dashboard-response.dto';
 
 
 @Controller('imc')
@@ -58,7 +59,16 @@ export class ImcController {
   }
 
   /*
-    
+    DASHBOARD
   */
-
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Devuelve el resumen del dashboard del usuario' })
+  @UseGuards(AuthGuard)
+  @Get('dashboard')
+  async obtenerDashboard(
+    @Req() req: RequestWithUser
+  ): Promise<DashboardResponseDto> {
+    console.log('Dashboard para', req.user.email);
+    return this.imcService.obtenerDashboard(req.user.id);
+  }
 }

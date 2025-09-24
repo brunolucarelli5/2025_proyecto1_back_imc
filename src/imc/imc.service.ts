@@ -2,6 +2,7 @@
 
 //Imports del helper
 import { calcularIMC, redondearIMC } from "./helpers/imc.helper";
+import { promedio, desviacion, contarCategorias } from "./helpers/dashboard.helper";
 
 //Resto de imports
 import { Inject, Injectable } from "@nestjs/common";
@@ -13,6 +14,8 @@ import { PaginacionHistorialImcDto } from "./dto/paginacion-historial-imc.dto";
 import { UserEntity } from "src/users/entities/user.entity";
 import { PaginacionResponseDto } from "./dto/paginacion-response.dto";
 import { CalculoImcResponseDto } from "./dto/calculo-imc-response.dto";
+import { DashboardResponseDto } from "./dto/dashboard/dashboard-response.dto";
+import { HistorialDashboardDto } from "./dto/dashboard/historial-dashboard.dto";
 
 
 @Injectable()
@@ -90,5 +93,44 @@ export class ImcService {
     return this.formatoResponseHistorial(rtaBD)
   }
 
+  async obtenerDashboard(userId: number): Promise<DashboardResponseDto> {
+    //Obtenemos el historial completo del usuario que hace la solicitud
+    const historiales = await this.imcRepository.findAllSorted('ASC', userId);
 
+    //Creamos arrays vacíos. Con for-each los llenamos con los datos que necesitamos en el dashbrd.
+    const historialDashboard: HistorialDashboardDto[] = []
+    const imcs: number[] = []
+    const pesos: number[] = []
+    const categoriasUsuario: string[] = []
+
+    //Hacemos un for para recorrer los historiales y completar los arrays anteriores.
+    for (const historial of historiales) {
+      historialDashboard.push({
+        fecha_calculo: historial.fecha_calculo,
+        imc: Number(historial.imc),
+        peso: Number(historial.peso),
+      })
+
+      imcs.push( Number(historial.imc) )    //Está guardado como str, lo pasamos a num.
+      pesos.push( Number(historial.peso) )  //Está guardado como str, lo pasamos a num.
+      categoriasUsuario.push(historial.categoria)
+    }
+
+    //Pasamos los arrays a un helper para obtener los datos que necesitamos.
+    return {
+      historiales: historialDashboard,
+
+      estadisticasPeso: {
+        promedio: promedio(pesos),
+        desviacion: desviacion(pesos)
+      },
+
+      estadisticasImc: {
+        promedio: promedio(imcs),
+        desviacion: desviacion(imcs)
+      },
+
+      categorias: contarCategorias(categoriasUsuario)
+    };
+  }
 }
