@@ -1,4 +1,13 @@
 //ARCHIVO: data-source.ts
+
+/* 
+  Generamos una migración con: 
+    npm run typeorm migration:generate -- -d src/database/data-source.ts src/database/migrations/nombre_migración
+
+  Aplicamos la migración con: 
+    npm run typeorm migration:run -- -d src/database/data-source.ts
+*/
+
 import { DataSource } from 'typeorm';
 import { config } from 'dotenv';
 import { UserEntity } from '../users/entities/user.entity';
