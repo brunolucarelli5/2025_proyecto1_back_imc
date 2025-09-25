@@ -33,7 +33,7 @@ export class UsersController {
   @ApiOperation({ summary: 'Actualiza un usuario' })
   @UseGuards(AuthGuard)
   @Patch('/:id')
-  update(@Param('id', ParseIntPipe) id: number, @Body() body: UpdateUserDTO): Promise<UserResponseDto> {
+  update(@Param('id') id: string, @Body() body: UpdateUserDTO): Promise<UserResponseDto> {
     console.log('Actualizando usuario')
     return this.service.update(id, body);
   }
@@ -42,7 +42,7 @@ export class UsersController {
   @ApiOperation({ summary: 'Elimina un usuario' })
   @UseGuards(AuthGuard)
   @Delete('/:id')
-  delete(@Param('id', ParseIntPipe) id: number): Promise<MessageResponseDTO> {
+  delete(@Param('id') id: string): Promise<MessageResponseDTO> {
     console.log('Eliminando usuario')
     return this.service.delete(id);
   }

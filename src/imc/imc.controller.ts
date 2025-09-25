@@ -4,7 +4,6 @@ import { Controller, Post, Body, ValidationPipe, Get, Query, UseGuards, Req } fr
 import { ImcService } from './imc.service';
 import { CalculoImcDto } from './dto/calculo-imc.dto';
 import { PaginacionHistorialImcDto } from './dto/paginacion-historial-imc.dto';
-import { CalculoImc } from './entities/CalculoImc.entity';
 import { SortValidationPipe } from './pipes/sort-validation.pipe';
 import { ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { PaginacionResponseDto } from './dto/paginacion-response.dto';
@@ -39,7 +38,7 @@ export class ImcController {
   getHistorial(
     @Query('sort', new SortValidationPipe()) sort: 'asc' | 'desc' = 'desc',
     @Req() req: RequestWithUser
-  ): Promise<CalculoImc[]> {
+  ): Promise<CalculoImcResponseDto[]> {
     console.log('Obteniendo historial de IMC para '+ req.user.email)
     return this.imcService.findAllSorted(sort, req.user.id);
   }

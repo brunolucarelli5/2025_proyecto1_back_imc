@@ -1,8 +1,8 @@
 // ARCHIVO: paginacion-response.dto.ts
-import { CalculoImc } from '../entities/CalculoImc.entity';
+import { CalculoImcResponseDto } from "./calculo-imc-response.dto";
 
 export class PaginacionResponseDto {
-  data: CalculoImc[];
+  data: CalculoImcResponseDto[];
 
   total: number;
 }

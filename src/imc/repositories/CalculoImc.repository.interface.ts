@@ -1,11 +1,11 @@
 //ARCHIVO: CalculoImc.repository.interface.ts
 import { CreateHistorialImcDto } from "../dto/create-historial-imc.dto";
-import { PaginacionResponseDto } from "../dto/paginacion-response.dto";
-import { CalculoImc } from "../entities/CalculoImc.entity";
+import { PaginacionDto } from "../dto/paginacion.dto";
+import { CalculoImc } from "../schemas/calculo-imc.schema";  // import schema clase
 
 export interface ICalculoImcRepository {
-    findAllSorted(order: 'ASC' | 'DESC', userId: number): Promise<CalculoImc[]>
-    findPag(pag: number, mostrar: number, sort: 'ASC' | 'DESC', userId): Promise<PaginacionResponseDto>
-
-    save(historial: CreateHistorialImcDto): Promise<CalculoImc>;
+  findAllSorted(sort: 'ASC' | 'DESC', userId: string): Promise<CalculoImc[]>;
+  findByIdConUsuario(id: string): Promise<CalculoImc>;
+  findPag(pag: number, mostrar: number, sort: 'ASC' | 'DESC', userId: string): Promise<PaginacionDto>;
+  save(historial: CreateHistorialImcDto): Promise<CalculoImc>;
 }
