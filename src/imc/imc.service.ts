@@ -81,7 +81,7 @@ export class ImcService {
     // Type assertion: convertimos el string a tipo 'ASC' | 'DESC' para cumplir con lo que espera TypeORM
     const sortMayus = sort.toUpperCase() as 'ASC' | 'DESC';   
     
-    //Desestructuramos
+    //Desestructuramos. 
     const { pag, mostrar } = paginacion;
     return await this.imcRepository.findPag(pag, mostrar, sortMayus, userId);
   }
