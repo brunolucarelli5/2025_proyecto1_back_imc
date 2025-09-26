@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { IUserRepository } from './repositories/users.repository.interface';
-import { UserEntity } from './entities/user.entity';
+import { User } from './schemas/user.schema';
 import { RegisterDTO } from './dto/register.dto';
 import { UpdateUserDTO } from './dto/update-user.dto';
 import { UserResponseDto } from './dto/user-response.dto';
@@ -22,16 +22,15 @@ describe('UsersService', () => {
   let userRepository: jest.Mocked<IUserRepository>;
 
   const mockUser = {
-    id: 1,
+    id: '1',
     email: 'test@example.com',
     password: 'hashedpassword',
     firstName: 'Test',
     lastName: 'User',
-    imcs: [],
-  } as unknown as UserEntity;
+  } as User;
 
   const mockUserResponse: UserResponseDto = {
-    id: 1,
+    id: '1',
     email: 'test@example.com',
     firstName: 'Test',
     lastName: 'User',
@@ -82,7 +81,7 @@ describe('UsersService', () => {
   describe('findAll', () => {
     it('should return array of user responses and handle empty results', async () => {
       // Test with users
-      const users = [mockUser, { ...mockUser, id: 2, email: 'test2@example.com' }] as UserEntity[];
+      const users = [mockUser, { ...mockUser, id: '2', email: 'test2@example.com' }] as User[];
       userRepository.findAll.mockResolvedValue(users);
 
       let result = await service.findAll();
@@ -138,7 +137,7 @@ describe('UsersService', () => {
       userRepository.findByEmail.mockResolvedValue(null);
       (passwordHelper.validatePasswordStrength as jest.Mock).mockImplementation(() => {});
       (bcrypt.hashSync as jest.Mock).mockReturnValue('hashedNewPassword');
-      userRepository.save.mockResolvedValue({ ...mockUser, email: 'new@example.com' } as UserEntity);
+      userRepository.save.mockResolvedValue({ ...mockUser, email: 'new@example.com' } as User);
 
       const result = await service.register(registerDto);
 
@@ -174,9 +173,9 @@ describe('UsersService', () => {
 
     it('should update user without password', async () => {
       userRepository.findById.mockResolvedValue(mockUser);
-      userRepository.update.mockResolvedValue({ ...mockUser, ...updateDto } as UserEntity);
+      userRepository.update.mockResolvedValue({ ...mockUser, ...updateDto } as User);
 
-      const result = await service.update(1, updateDto);
+      const result = await service.update('1', updateDto);
       expect(result.firstName).toBe('Updated');
       expect(result.lastName).toBe('Name');
     });
@@ -186,9 +185,9 @@ describe('UsersService', () => {
       userRepository.findById.mockResolvedValue(mockUser);
       (passwordHelper.validatePasswordStrength as jest.Mock).mockImplementation(() => {});
       (bcrypt.hashSync as jest.Mock).mockReturnValue('hashedNewPassword');
-      userRepository.update.mockResolvedValue({ ...mockUser, ...updateWithPassword } as UserEntity);
+      userRepository.update.mockResolvedValue({ ...mockUser, ...updateWithPassword } as User);
 
-      const result = await service.update(1, updateWithPassword);
+      const result = await service.update('1', updateWithPassword);
       expect(passwordHelper.validatePasswordStrength).toHaveBeenCalled();
       expect(bcrypt.hashSync).toHaveBeenCalledWith('NewPass123!', 10);
     });
@@ -197,16 +196,16 @@ describe('UsersService', () => {
       // User not found
       userRepository.findById.mockResolvedValue(null);
       userRepository.update.mockResolvedValue(null);
-      await expect(service.update(999, updateDto)).rejects.toThrow(NotFoundException);
+      await expect(service.update('999', updateDto)).rejects.toThrow(NotFoundException);
 
       // Repository update returns null
       userRepository.findById.mockResolvedValue(mockUser);
       userRepository.update.mockResolvedValue(null);
-      await expect(service.update(1, updateDto)).rejects.toThrow(NotFoundException);
+      await expect(service.update('1', updateDto)).rejects.toThrow(NotFoundException);
 
       // Repository error
       userRepository.update.mockRejectedValue(new Error('Update failed'));
-      await expect(service.update(1, updateDto)).rejects.toThrow('Update failed');
+      await expect(service.update('1', updateDto)).rejects.toThrow('Update failed');
     });
   });
 
@@ -214,19 +213,19 @@ describe('UsersService', () => {
     it('should delete user successfully', async () => {
       userRepository.delete.mockResolvedValue(true);
 
-      const result = await service.delete(1);
+      const result = await service.delete('1');
       expect(result).toEqual({ message: 'Usuario ID N°1 eliminado.' });
-      expect(userRepository.delete).toHaveBeenCalledWith(1);
+      expect(userRepository.delete).toHaveBeenCalledWith('1');
     });
 
     it('should handle user not found and edge cases', async () => {
       // User not found
       userRepository.delete.mockResolvedValue(false);
-      await expect(service.delete(999)).rejects.toThrow(NotFoundException);
+      await expect(service.delete('999')).rejects.toThrow(NotFoundException);
 
       // Repository error
       userRepository.delete.mockRejectedValue(new Error('Delete failed'));
-      await expect(service.delete(1)).rejects.toThrow('Delete failed');
+      await expect(service.delete('1')).rejects.toThrow('Delete failed');
     });
   });
 });

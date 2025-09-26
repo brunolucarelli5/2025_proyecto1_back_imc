@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { BadRequestException, UnauthorizedException } from '@nestjs/common';
+import { UnauthorizedException } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { JwtService } from './jwt/jwt.service';
 import { UsersService } from '../users/users.service';
@@ -16,24 +16,20 @@ describe('AuthService', () => {
   let usersService: jest.Mocked<UsersService>;
 
   const mockUser = {
-    id: 1,
+    id: '1',
     email: 'test@example.com',
     password: 'hashedPassword123',
     firstName: 'Test',
     lastName: 'User',
   };
 
-  const mockTokenPair = {
-    accessToken: 'mock.access.token',
-    refreshToken: 'mock.refresh.token',
-  };
 
   beforeEach(async () => {
     const mockJwtService = {
       generateToken: jest.fn(),
       refreshToken: jest.fn(),
       getPayload: jest.fn(),
-    };
+    } as any;
 
     const mockUsersService = {
       findByEmail: jest.fn(),
@@ -207,7 +203,7 @@ describe('AuthService', () => {
         refreshToken: 'new.refresh',
       };
 
-      jwtService.refreshToken.mockResolvedValue(expectedTokens);
+      (jwtService.refreshToken as jest.Mock).mockResolvedValue(expectedTokens);
 
       const result = await service.tokens(refreshToken);
 
@@ -223,7 +219,7 @@ describe('AuthService', () => {
       ];
 
       for (const token of tokenTestCases) {
-        jwtService.refreshToken.mockResolvedValue({
+        (jwtService.refreshToken as jest.Mock).mockResolvedValue({
           accessToken: 'new.access',
         });
 
@@ -236,7 +232,7 @@ describe('AuthService', () => {
 
     it('should propagate JWT service errors', async () => {
       const invalidToken = 'invalid.token';
-      jwtService.refreshToken.mockRejectedValue(
+      (jwtService.refreshToken as jest.Mock).mockRejectedValue(
         new UnauthorizedException('Invalid token'),
       );
 
@@ -267,7 +263,7 @@ describe('AuthService', () => {
       });
 
       // Token refresh
-      jwtService.refreshToken.mockResolvedValue({
+      (jwtService.refreshToken as jest.Mock).mockResolvedValue({
         accessToken: 'access2',
         refreshToken: 'refresh2',
       });

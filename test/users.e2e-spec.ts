@@ -3,14 +3,14 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import * as request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
-import { getRepositoryToken } from '@nestjs/typeorm';
-import { UserEntity } from '../src/users/entities/user.entity';
-import { Repository } from 'typeorm';
+import { getModelToken } from '@nestjs/mongoose';
+import { User } from '../src/users/schemas/user.schema';
+import { Model } from 'mongoose';
 import { hashSync } from 'bcrypt';
 
 describe('Users Controller (e2e)', () => {
   let app: INestApplication<App>;
-  let userRepository: Repository<UserEntity>;
+  let userModel: Model<User>;
   let accessToken: string;
 
   const testUser = {
@@ -33,7 +33,7 @@ describe('Users Controller (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
-    userRepository = moduleFixture.get<Repository<UserEntity>>(getRepositoryToken(UserEntity));
+    userModel = moduleFixture.get<Model<User>>(getModelToken(User.name));
 
     app.useGlobalPipes(
       new ValidationPipe({
@@ -45,10 +45,10 @@ describe('Users Controller (e2e)', () => {
 
     await app.init();
 
-    // Clear users table and create test user
-    await userRepository.clear();
+    // Clear users collection and create test user
+    await userModel.deleteMany({});
     const hashedPassword = hashSync(testUser.password, 10);
-    await userRepository.save({
+    await userModel.create({
       ...testUser,
       password: hashedPassword,
     });
@@ -65,7 +65,9 @@ describe('Users Controller (e2e)', () => {
   });
 
   afterEach(async () => {
-    await app.close();
+    if (app) {
+      await app.close();
+    }
   });
 
   describe('/users/register (POST)', () => {
@@ -90,7 +92,7 @@ describe('Users Controller (e2e)', () => {
           .send(newUser)
           .expect(201);
 
-        const savedUser = await userRepository.findOneBy({ email: newUser.email });
+        const savedUser = await userModel.findOne({ email: newUser.email });
         expect(savedUser).toBeDefined();
         expect(savedUser!.password).not.toBe(newUser.password);
         expect(savedUser!.password.length).toBeGreaterThan(20); // Bcrypt hash length
@@ -259,10 +261,10 @@ describe('Users Controller (e2e)', () => {
   });
 
   describe('/users/:id (PATCH)', () => {
-    let userId: number;
+    let userId: string;
 
     beforeEach(async () => {
-      const user = await userRepository.findOneBy({ email: testUser.email });
+      const user = await userModel.findOne({ email: testUser.email });
       userId = user!.id;
     });
 
@@ -307,7 +309,7 @@ describe('Users Controller (e2e)', () => {
           .send(updateData)
           .expect(200);
 
-        const updatedUser = await userRepository.findOneBy({ id: userId });
+        const updatedUser = await userModel.findById(userId);
         expect(updatedUser!.password).not.toBe(updateData.password);
         expect(updatedUser!.password).not.toBe(testUser.password);
       });
@@ -384,7 +386,7 @@ describe('Users Controller (e2e)', () => {
   });
 
   describe('/users/:id (DELETE)', () => {
-    let userId: number;
+    let userId: string;
 
     beforeEach(async () => {
       // Create a separate user to delete
@@ -406,7 +408,7 @@ describe('Users Controller (e2e)', () => {
       expect(response.body.message).toContain(`Usuario ID N°${userId} eliminado`);
 
       // Verify user is actually deleted
-      const deletedUser = await userRepository.findOneBy({ id: userId });
+      const deletedUser = await userModel.findById(userId);
       expect(deletedUser).toBeNull();
     });
 

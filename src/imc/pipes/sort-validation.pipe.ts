@@ -18,6 +18,6 @@ export class SortValidationPipe implements PipeTransform {
             throw new BadRequestException(`'${sort}' no es un valor válido para sort. Usá 'asc' o 'desc'.`);
         }
 
-        return sortMinusculas as 'asc' | 'desc';
+        return sortMinusculas;
   }
 }

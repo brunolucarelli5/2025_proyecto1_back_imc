@@ -23,6 +23,9 @@ export class CalculoImcRepository implements ICalculoImcRepository {
       }
       return result;
     } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
       throw new InternalServerErrorException(`Error al buscar IMC por ID: ${error}`);
     }
   }

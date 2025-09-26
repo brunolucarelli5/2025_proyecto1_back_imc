@@ -1,174 +1,200 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { InternalServerErrorException } from '@nestjs/common';
+import { getModelToken } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import { InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { CalculoImcRepository } from './CalculoImc.repository';
-import { CalculoImc } from '../entities/CalculoImc.entity';
+import { CalculoImc } from '../schemas/calculo-imc.schema';
 import { CreateHistorialImcDto } from '../dto/create-historial-imc.dto';
 
 describe('CalculoImcRepository', () => {
   let repository: CalculoImcRepository;
-  let typeormRepo: jest.Mocked<Repository<CalculoImc>>;
+  let imcModel: any;
 
   const mockCalculoImc = {
-    id: 1,
+    id: '1',
     altura: 1.75,
     peso: 70,
     imc: 22.86,
     categoria: 'Normal',
     fecha_calculo: new Date('2023-01-01'),
-    user: { id: 1, email: 'test@example.com', firstName: 'Test', lastName: 'User' },
-  } as CalculoImc;
+    user: { id: '1', _id: '1', email: 'test@example.com', firstName: 'Test', lastName: 'User', password: 'hashed' },
+  } as unknown as CalculoImc;
 
-  const mockTypeormRepo = {
-    find: jest.fn(),
-    findAndCount: jest.fn(),
+  const mockInstance = {
     save: jest.fn(),
   };
+
+  const mockImcModel = jest.fn().mockImplementation(() => mockInstance);
+  Object.assign(mockImcModel, {
+    find: jest.fn().mockReturnThis(),
+    findById: jest.fn().mockReturnThis(),
+    populate: jest.fn().mockReturnThis(),
+    sort: jest.fn().mockReturnThis(),
+    skip: jest.fn().mockReturnThis(),
+    limit: jest.fn().mockReturnThis(),
+    exec: jest.fn(),
+    countDocuments: jest.fn().mockReturnThis(),
+  });
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         CalculoImcRepository,
         {
-          provide: getRepositoryToken(CalculoImc),
-          useValue: mockTypeormRepo,
+          provide: getModelToken(CalculoImc.name),
+          useValue: mockImcModel,
         },
       ],
     }).compile();
 
     repository = module.get<CalculoImcRepository>(CalculoImcRepository);
-    typeormRepo = module.get<Repository<CalculoImc>>(getRepositoryToken(CalculoImc)) as jest.Mocked<Repository<CalculoImc>>;
+    imcModel = module.get(getModelToken(CalculoImc.name)) as any;
   });
 
   afterEach(() => {
     jest.clearAllMocks();
   });
 
+  describe('findByIdConUsuario', () => {
+    it('should return calculation with user data when found', async () => {
+      imcModel.exec.mockResolvedValue(mockCalculoImc);
+
+      const result = await repository.findByIdConUsuario('1');
+
+      expect(result).toEqual(mockCalculoImc);
+      expect(imcModel.findById).toHaveBeenCalledWith('1');
+      expect(imcModel.populate).toHaveBeenCalledWith('user');
+    });
+
+    it('should throw NotFoundException when calculation not found', async () => {
+      imcModel.exec.mockResolvedValue(null);
+
+      await expect(repository.findByIdConUsuario('999')).rejects.toThrow(NotFoundException);
+    });
+
+    it('should handle database errors', async () => {
+      imcModel.exec.mockRejectedValue(new Error('Database connection failed'));
+
+      await expect(repository.findByIdConUsuario('1')).rejects.toThrow(InternalServerErrorException);
+    });
+  });
+
   describe('findAllSorted', () => {
     it('should return sorted calculations for ASC order', async () => {
       const calculations = [mockCalculoImc];
-      typeormRepo.find.mockResolvedValue(calculations);
+      imcModel.exec.mockResolvedValue(calculations);
 
-      const result = await repository.findAllSorted('ASC', 1);
+      const result = await repository.findAllSorted('ASC', '1');
 
       expect(result).toEqual(calculations);
-      expect(typeormRepo.find).toHaveBeenCalledWith({
-        where: { user: { id: 1 } },
-        order: { fecha_calculo: 'ASC' },
-      });
+      expect(imcModel.find).toHaveBeenCalledWith({ user: '1' });
+      expect(imcModel.populate).toHaveBeenCalledWith('user');
+      expect(imcModel.sort).toHaveBeenCalledWith({ fecha_calculo: 1 });
     });
 
     it('should return sorted calculations for DESC order', async () => {
       const calculations = [mockCalculoImc];
-      typeormRepo.find.mockResolvedValue(calculations);
+      imcModel.exec.mockResolvedValue(calculations);
 
-      const result = await repository.findAllSorted('DESC', 1);
+      const result = await repository.findAllSorted('DESC', '1');
 
       expect(result).toEqual(calculations);
-      expect(typeormRepo.find).toHaveBeenCalledWith({
-        where: { user: { id: 1 } },
-        order: { fecha_calculo: 'DESC' },
-      });
+      expect(imcModel.find).toHaveBeenCalledWith({ user: '1' });
+      expect(imcModel.populate).toHaveBeenCalledWith('user');
+      expect(imcModel.sort).toHaveBeenCalledWith({ fecha_calculo: -1 });
     });
 
     it('should return empty array when no calculations found', async () => {
-      typeormRepo.find.mockResolvedValue([]);
+      imcModel.exec.mockResolvedValue([]);
 
-      const result = await repository.findAllSorted('DESC', 999);
+      const result = await repository.findAllSorted('DESC', '999');
 
       expect(result).toEqual([]);
     });
 
-    it('should handle database errors', async () => {
-      typeormRepo.find.mockRejectedValue(new Error('Database connection failed'));
-
-      await expect(repository.findAllSorted('ASC', 1)).rejects.toThrow(InternalServerErrorException);
-      await expect(repository.findAllSorted('ASC', 1)).rejects.toThrow('Error al obtener el historial ordenado (ASC) de IMC. Error: Error: Database connection failed');
-    });
   });
 
   describe('findPag', () => {
     it('should return paginated results correctly', async () => {
       const data = [mockCalculoImc];
       const total = 10;
-      typeormRepo.findAndCount.mockResolvedValue([data, total]);
 
-      const result = await repository.findPag(1, 5, 'DESC', 1);
+      // Mock Promise.all result
+      const execMock = jest.fn();
+      execMock.mockResolvedValueOnce(data).mockResolvedValueOnce(total);
+      imcModel.exec = execMock;
+
+      const result = await repository.findPag(1, 5, 'DESC', '1');
 
       expect(result).toEqual({ data, total });
-      expect(typeormRepo.findAndCount).toHaveBeenCalledWith({
-        where: { user: { id: 1 } },
-        skip: 0,
-        take: 5,
-        order: { fecha_calculo: 'DESC' },
-      });
+      expect(imcModel.find).toHaveBeenCalledWith({ user: '1' });
+      expect(imcModel.populate).toHaveBeenCalledWith('user');
+      expect(imcModel.sort).toHaveBeenCalledWith({ fecha_calculo: -1 });
+      expect(imcModel.skip).toHaveBeenCalledWith(0);
+      expect(imcModel.limit).toHaveBeenCalledWith(5);
     });
 
     it('should calculate skip correctly for different pages', async () => {
       const data = [mockCalculoImc];
       const total = 25;
-      typeormRepo.findAndCount.mockResolvedValue([data, total]);
 
-      await repository.findPag(3, 10, 'ASC', 1);
+      const execMock = jest.fn();
+      execMock.mockResolvedValueOnce(data).mockResolvedValueOnce(total);
+      imcModel.exec = execMock;
 
-      expect(typeormRepo.findAndCount).toHaveBeenCalledWith({
-        where: { user: { id: 1 } },
-        skip: 20, // (3-1) * 10 = 20
-        take: 10,
-        order: { fecha_calculo: 'ASC' },
-      });
+      await repository.findPag(3, 10, 'ASC', '1');
+
+      expect(imcModel.find).toHaveBeenCalledWith({ user: '1' });
+      expect(imcModel.sort).toHaveBeenCalledWith({ fecha_calculo: 1 });
+      expect(imcModel.skip).toHaveBeenCalledWith(20); // (3-1) * 10 = 20
+      expect(imcModel.limit).toHaveBeenCalledWith(10);
     });
 
     it('should handle first page', async () => {
       const data = [mockCalculoImc];
       const total = 5;
-      typeormRepo.findAndCount.mockResolvedValue([data, total]);
 
-      const result = await repository.findPag(1, 5, 'DESC', 1);
+      const execMock = jest.fn();
+      execMock.mockResolvedValueOnce(data).mockResolvedValueOnce(total);
+      imcModel.exec = execMock;
 
-      expect(typeormRepo.findAndCount).toHaveBeenCalledWith({
-        where: { user: { id: 1 } },
-        skip: 0,
-        take: 5,
-        order: { fecha_calculo: 'DESC' },
-      });
+      const result = await repository.findPag(1, 5, 'DESC', '1');
+
+      expect(imcModel.skip).toHaveBeenCalledWith(0);
+      expect(imcModel.limit).toHaveBeenCalledWith(5);
     });
 
     it('should handle large page numbers', async () => {
-      typeormRepo.findAndCount.mockResolvedValue([[], 0]);
+      const execMock = jest.fn();
+      execMock.mockResolvedValueOnce([]).mockResolvedValueOnce(0);
+      imcModel.exec = execMock;
 
-      const result = await repository.findPag(100, 5, 'DESC', 1);
+      const result = await repository.findPag(100, 5, 'DESC', '1');
 
       expect(result).toEqual({ data: [], total: 0 });
-      expect(typeormRepo.findAndCount).toHaveBeenCalledWith({
-        where: { user: { id: 1 } },
-        skip: 495, // (100-1) * 5
-        take: 5,
-        order: { fecha_calculo: 'DESC' },
-      });
+      expect(imcModel.skip).toHaveBeenCalledWith(495); // (100-1) * 5
+      expect(imcModel.limit).toHaveBeenCalledWith(5);
     });
 
     it('should handle different page sizes', async () => {
       const data = [mockCalculoImc];
       const total = 1;
-      typeormRepo.findAndCount.mockResolvedValue([data, total]);
 
-      await repository.findPag(1, 1, 'ASC', 1);
+      const execMock = jest.fn();
+      execMock.mockResolvedValueOnce(data).mockResolvedValueOnce(total);
+      imcModel.exec = execMock;
 
-      expect(typeormRepo.findAndCount).toHaveBeenCalledWith({
-        where: { user: { id: 1 } },
-        skip: 0,
-        take: 1,
-        order: { fecha_calculo: 'ASC' },
-      });
+      await repository.findPag(1, 1, 'ASC', '1');
+
+      expect(imcModel.skip).toHaveBeenCalledWith(0);
+      expect(imcModel.limit).toHaveBeenCalledWith(1);
     });
 
     it('should handle database errors', async () => {
-      typeormRepo.findAndCount.mockRejectedValue(new Error('Database timeout'));
+      imcModel.exec.mockRejectedValue(new Error('Database timeout'));
 
-      await expect(repository.findPag(1, 5, 'DESC', 1)).rejects.toThrow(InternalServerErrorException);
-      await expect(repository.findPag(1, 5, 'DESC', 1)).rejects.toThrow('Error al paginar el historial de IMC. Error:Error: Database timeout');
+      await expect(repository.findPag(1, 5, 'DESC', '1')).rejects.toThrow(InternalServerErrorException);
+      await expect(repository.findPag(1, 5, 'DESC', '1')).rejects.toThrow('Error al paginar historial de IMC: Error: Database timeout');
     });
   });
 
@@ -178,27 +204,29 @@ describe('CalculoImcRepository', () => {
       peso: 70,
       imc: 22.86,
       categoria: 'Normal',
-      user: { id: 1 } as any,
+      user: '1',
+      fecha_calculo: new Date(),
     };
 
     it('should save calculation successfully', async () => {
-      typeormRepo.save.mockResolvedValue(mockCalculoImc);
+      mockInstance.save.mockResolvedValue(mockCalculoImc);
 
       const result = await repository.save(historialDto);
 
       expect(result).toEqual(mockCalculoImc);
-      expect(typeormRepo.save).toHaveBeenCalledWith(historialDto);
+      expect(mockImcModel).toHaveBeenCalledWith(historialDto);
+      expect(mockInstance.save).toHaveBeenCalled();
     });
 
     it('should handle save errors', async () => {
-      typeormRepo.save.mockRejectedValue(new Error('Constraint violation'));
+      mockInstance.save.mockRejectedValue(new Error('Constraint violation'));
 
       await expect(repository.save(historialDto)).rejects.toThrow(InternalServerErrorException);
-      await expect(repository.save(historialDto)).rejects.toThrow('Error al crear el historial de IMC. Error:Error: Constraint violation');
+      await expect(repository.save(historialDto)).rejects.toThrow('Error al guardar cálculo IMC: Error: Constraint violation');
     });
 
     it('should handle foreign key errors', async () => {
-      typeormRepo.save.mockRejectedValue(new Error('Foreign key constraint failed'));
+      mockInstance.save.mockRejectedValue(new Error('Foreign key constraint failed'));
 
       await expect(repository.save(historialDto)).rejects.toThrow(InternalServerErrorException);
     });

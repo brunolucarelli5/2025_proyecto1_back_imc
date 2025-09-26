@@ -5,6 +5,9 @@ import { AuthService } from './auth.service';
 import { LoginDTO } from './dto/login.dto';
 import { TokenPairDTO } from './dto/token-pair.dto';
 import { RequestWithUser } from './interfaces/request-with-user.interface';
+import { JwtService } from './jwt/jwt.service';
+import { UsersService } from '../users/users.service';
+import { AuthGuard } from './guards/auth.guard';
 
 describe('AuthController', () => {
   let controller: AuthController;
@@ -16,7 +19,7 @@ describe('AuthController', () => {
   };
 
   const mockUser = {
-    id: 1,
+    id: '1',
     email: 'test@example.com',
     firstName: 'Test',
     lastName: 'User',
@@ -24,12 +27,27 @@ describe('AuthController', () => {
 
   const mockRequest = {
     user: mockUser,
-  } as RequestWithUser;
+    // Add minimal request properties to satisfy the interface
+    headers: {},
+    params: {},
+    query: {},
+    body: {},
+  } as unknown as RequestWithUser;
 
   beforeEach(async () => {
     const mockAuthService = {
       login: jest.fn(),
       tokens: jest.fn(),
+    };
+
+    const mockJwtService = {
+      sign: jest.fn(),
+      verify: jest.fn(),
+    };
+
+    const mockUsersService = {
+      findByEmail: jest.fn(),
+      findById: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -38,6 +56,14 @@ describe('AuthController', () => {
         {
           provide: AuthService,
           useValue: mockAuthService,
+        },
+        {
+          provide: JwtService,
+          useValue: mockJwtService,
+        },
+        {
+          provide: UsersService,
+          useValue: mockUsersService,
         },
       ],
     }).compile();
@@ -201,7 +227,7 @@ describe('AuthController', () => {
       const result = controller.me(mockRequest);
 
       expect(result).toEqual({
-        id: 1,
+        id: '1',
         email: 'test@example.com',
         firstName: 'Test',
         lastName: 'User',
@@ -211,19 +237,19 @@ describe('AuthController', () => {
     it('should handle different user data structures', async () => {
       const userTestCases = [
         {
-          id: 1,
+          id: '1',
           email: 'simple@test.com',
           firstName: 'John',
           lastName: 'Doe',
         },
         {
-          id: 999,
+          id: '999',
           email: 'complex.email+tag@subdomain.example.org',
           firstName: 'María José',
           lastName: 'García-López',
         },
         {
-          id: 42,
+          id: '42',
           email: 'test@domain.co',
           firstName: 'A',
           lastName: 'B',
@@ -231,7 +257,7 @@ describe('AuthController', () => {
       ];
 
       for (const user of userTestCases) {
-        const request = { user } as RequestWithUser;
+        const request = { user } as unknown as RequestWithUser;
         const result = controller.me(request);
 
         expect(result).toEqual({
@@ -244,12 +270,12 @@ describe('AuthController', () => {
     });
 
     it('should handle boundary user ID values', async () => {
-      const idTestCases = [1, 999999, 0, -1];
+      const idTestCases = ['1', '999999', '0', '-1'];
 
       for (const id of idTestCases) {
         const request = {
           user: { ...mockUser, id },
-        } as RequestWithUser;
+        } as unknown as RequestWithUser;
 
         const result = controller.me(request);
 

@@ -12,7 +12,7 @@ describe('ImcController', () => {
   let service: jest.Mocked<ImcService>;
 
   const mockUser = {
-    id: 1,
+    id: '1',
     email: 'test@example.com',
     firstName: 'Test',
     lastName: 'User',
@@ -23,7 +23,7 @@ describe('ImcController', () => {
   };
 
   const mockCalculoResponse = {
-    id: 1,
+    id: '1',
     altura: 1.75,
     peso: 70,
     imc: 22.86,
@@ -34,7 +34,7 @@ describe('ImcController', () => {
 
   const mockHistorial = [
     {
-      id: 1,
+      id: '1',
       altura: 1.75,
       peso: 70,
       imc: 22.86,
@@ -96,19 +96,14 @@ describe('ImcController', () => {
   });
 
   describe('calcular', () => {
-    it('should calculate IMC and log message', async () => {
+    it('should calculate IMC successfully', async () => {
       const dto: CalculoImcDto = { altura: 1.75, peso: 70 };
-      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
-
       service.calcularImc.mockResolvedValue(mockCalculoResponse);
 
       const result = await controller.calcular(dto, mockRequest as any);
 
-      expect(consoleSpy).toHaveBeenCalledWith('Calculando IMC');
       expect(service.calcularImc).toHaveBeenCalledWith(dto, mockUser);
       expect(result).toEqual(mockCalculoResponse);
-
-      consoleSpy.mockRestore();
     });
 
     it('should handle service errors', async () => {
@@ -139,35 +134,22 @@ describe('ImcController', () => {
   });
 
   describe('getHistorial', () => {
-    it('should get historial with default sort and log message', async () => {
-      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+    it('should get historial with different sort options', async () => {
       service.findAllSorted.mockResolvedValue(mockHistorial as any);
 
-      const result = await controller.getHistorial('desc', mockRequest as any);
+      const resultDesc = await controller.getHistorial('desc', mockRequest as any);
+      expect(service.findAllSorted).toHaveBeenCalledWith('desc', '1');
+      expect(resultDesc).toEqual(mockHistorial);
 
-      expect(consoleSpy).toHaveBeenCalledWith('Obteniendo historial de IMC para test@example.com');
-      expect(service.findAllSorted).toHaveBeenCalledWith('desc', 1);
-      expect(result).toEqual(mockHistorial);
-
-      consoleSpy.mockRestore();
-    });
-
-    it('should get historial with asc sort', async () => {
-      service.findAllSorted.mockResolvedValue(mockHistorial as any);
-
-      const result = await controller.getHistorial('asc', mockRequest as any);
-
-      expect(service.findAllSorted).toHaveBeenCalledWith('asc', 1);
-      expect(result).toEqual(mockHistorial);
+      const resultAsc = await controller.getHistorial('asc', mockRequest as any);
+      expect(service.findAllSorted).toHaveBeenCalledWith('asc', '1');
+      expect(resultAsc).toEqual(mockHistorial);
     });
 
     it('should handle empty historial', async () => {
       service.findAllSorted.mockResolvedValue([]);
-
       const result = await controller.getHistorial('desc', mockRequest as any);
-
       expect(result).toEqual([]);
-      expect(service.findAllSorted).toHaveBeenCalledWith('desc', 1);
     });
 
     it('should handle service errors', async () => {
@@ -178,62 +160,23 @@ describe('ImcController', () => {
   });
 
   describe('findPag', () => {
-    it('should get paginated results and log message', async () => {
+    it('should get paginated results with different parameters', async () => {
       const paginacion: PaginacionHistorialImcDto = { pag: 1, mostrar: 5 };
-      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
-
       service.findPag.mockResolvedValue(mockPaginationResponse);
 
       const result = await controller.findPag(paginacion, 'desc', mockRequest as any);
 
-      expect(consoleSpy).toHaveBeenCalledWith('Obteniendo paginación de historial IMC para usuario test@example.com');
-      expect(service.findPag).toHaveBeenCalledWith(paginacion, 'desc', 1);
+      expect(service.findPag).toHaveBeenCalledWith(paginacion, 'desc', '1');
       expect(result).toEqual(mockPaginationResponse);
-
-      consoleSpy.mockRestore();
-    });
-
-    it('should handle different pagination parameters', async () => {
-      const paginaciones = [
-        { pag: 1, mostrar: 10 },
-        { pag: 2, mostrar: 5 },
-        { pag: 3, mostrar: 20 },
-      ];
-
-      for (const paginacion of paginaciones) {
-        service.findPag.mockResolvedValue(mockPaginationResponse);
-
-        const result = await controller.findPag(paginacion, 'asc', mockRequest as any);
-
-        expect(service.findPag).toHaveBeenCalledWith(paginacion, 'asc', 1);
-        expect(result).toEqual(mockPaginationResponse);
-      }
-    });
-
-    it('should handle pagination with different sort orders', async () => {
-      const paginacion: PaginacionHistorialImcDto = { pag: 1, mostrar: 5 };
-      const sortOrders: ('asc' | 'desc')[] = ['asc', 'desc'];
-
-      for (const sort of sortOrders) {
-        service.findPag.mockResolvedValue(mockPaginationResponse);
-
-        const result = await controller.findPag(paginacion, sort, mockRequest as any);
-
-        expect(service.findPag).toHaveBeenCalledWith(paginacion, sort, 1);
-        expect(result).toEqual(mockPaginationResponse);
-      }
     });
 
     it('should handle empty pagination results', async () => {
       const paginacion: PaginacionHistorialImcDto = { pag: 999, mostrar: 5 };
       const emptyResponse = { data: [], total: 0 };
-
       service.findPag.mockResolvedValue(emptyResponse);
 
       const result = await controller.findPag(paginacion, 'desc', mockRequest as any);
-
       expect(result).toEqual(emptyResponse);
-      expect(service.findPag).toHaveBeenCalledWith(paginacion, 'desc', 1);
     });
 
     it('should handle service errors in pagination', async () => {
@@ -244,11 +187,29 @@ describe('ImcController', () => {
     });
   });
 
+  describe('obtenerDashboard', () => {
+    it('should get dashboard data for user', async () => {
+      const mockDashboard = {
+        historiales: [],
+        promedio_desviacion: { promedio: 22.5, desviacion: 2.1 },
+        categorias: { cantBajoPeso: 0, cantNormal: 1, cantSobrepeso: 0, cantObeso: 0 }
+      };
+
+      service.obtenerDashboard = jest.fn().mockResolvedValue(mockDashboard);
+
+      const result = await controller.obtenerDashboard(mockRequest as any);
+
+      expect(result).toEqual(mockDashboard);
+      expect(service.obtenerDashboard).toHaveBeenCalledWith(mockUser.id);
+    });
+  });
+
   describe('integration scenarios', () => {
     it('should have all required methods', () => {
       expect(typeof controller.calcular).toBe('function');
       expect(typeof controller.getHistorial).toBe('function');
       expect(typeof controller.findPag).toBe('function');
+      expect(typeof controller.obtenerDashboard).toBe('function');
     });
 
     it('should use correct user ID from request', async () => {

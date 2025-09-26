@@ -3,8 +3,8 @@ import { ConfigService } from '@nestjs/config';
 import { UsersModule } from './users.module';
 import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
-import { UserEntity } from './entities/user.entity';
-import { getRepositoryToken } from '@nestjs/typeorm';
+import { User } from './schemas/user.schema';
+import { getModelToken } from '@nestjs/mongoose';
 import { JwtService } from '../auth/jwt/jwt.service';
 
 describe('UsersModule', () => {
@@ -30,14 +30,14 @@ describe('UsersModule', () => {
     }),
   };
 
-  const mockTypeOrmRepository = {
+  const mockMongooseModel = {
     find: jest.fn(),
     findOne: jest.fn(),
-    save: jest.fn(),
-    update: jest.fn(),
-    delete: jest.fn(),
-    remove: jest.fn(),
-    createQueryBuilder: jest.fn(),
+    findById: jest.fn(),
+    create: jest.fn(),
+    findByIdAndUpdate: jest.fn(),
+    findByIdAndDelete: jest.fn(),
+    exec: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -55,8 +55,8 @@ describe('UsersModule', () => {
           useValue: mockUserRepository,
         },
         {
-          provide: getRepositoryToken(UserEntity),
-          useValue: mockTypeOrmRepository,
+          provide: getModelToken(User.name),
+          useValue: mockMongooseModel,
         },
       ],
     }).compile();

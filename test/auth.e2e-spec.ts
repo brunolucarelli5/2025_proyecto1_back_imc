@@ -3,14 +3,14 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import * as request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
-import { getRepositoryToken } from '@nestjs/typeorm';
-import { UserEntity } from '../src/users/entities/user.entity';
-import { Repository } from 'typeorm';
+import { getModelToken } from '@nestjs/mongoose';
+import { User } from '../src/users/schemas/user.schema';
+import { Model } from 'mongoose';
 import { hashSync } from 'bcrypt';
 
 describe('Auth Controller (e2e)', () => {
   let app: INestApplication<App>;
-  let userRepository: Repository<UserEntity>;
+  let userModel: Model<User>;
 
   const testUser = {
     email: 'test@example.com',
@@ -25,7 +25,7 @@ describe('Auth Controller (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
-    userRepository = moduleFixture.get<Repository<UserEntity>>(getRepositoryToken(UserEntity));
+    userModel = moduleFixture.get<Model<User>>(getModelToken(User.name));
 
     app.useGlobalPipes(
       new ValidationPipe({
@@ -37,17 +37,19 @@ describe('Auth Controller (e2e)', () => {
 
     await app.init();
 
-    // Clear users table and create test user
-    await userRepository.clear();
+    // Clear users collection and create test user
+    await userModel.deleteMany({});
     const hashedPassword = hashSync(testUser.password, 10);
-    await userRepository.save({
+    await userModel.create({
       ...testUser,
       password: hashedPassword,
     });
   });
 
   afterEach(async () => {
-    await app.close();
+    if (app) {
+      await app.close();
+    }
   });
 
   describe('/auth/login (POST)', () => {

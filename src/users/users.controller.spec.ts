@@ -13,7 +13,7 @@ describe('UsersController - Isolated', () => {
   let service: jest.Mocked<UsersService>;
 
   const mockUserResponse: UserResponseDto = {
-    id: 1,
+    id: '1',
     email: 'test@example.com',
     firstName: 'Test',
     lastName: 'User',
@@ -65,55 +65,6 @@ describe('UsersController - Isolated', () => {
     expect(controller).toBeDefined();
   });
 
-  describe('console.log coverage', () => {
-    it('should log message when finding all users', async () => {
-      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
-      service.findAll.mockResolvedValue([mockUserResponse]);
-
-      await controller.findAll();
-
-      expect(consoleSpy).toHaveBeenCalledWith('Obteniendo todos los ususarios');
-      consoleSpy.mockRestore();
-    });
-
-    it('should log message when registering user', async () => {
-      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
-      const registerDto: RegisterDTO = {
-        email: 'new@example.com',
-        password: 'password',
-        firstName: 'New',
-        lastName: 'User',
-      };
-      service.register.mockResolvedValue(mockUserResponse);
-
-      await controller.register(registerDto);
-
-      expect(consoleSpy).toHaveBeenCalledWith('Registrando nuevo usuario');
-      consoleSpy.mockRestore();
-    });
-
-    it('should log message when updating user', async () => {
-      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
-      const updateDto: UpdateUserDTO = { firstName: 'Updated' };
-      service.update.mockResolvedValue(mockUserResponse);
-
-      await controller.update(1, updateDto);
-
-      expect(consoleSpy).toHaveBeenCalledWith('Actualizando usuario');
-      consoleSpy.mockRestore();
-    });
-
-    it('should log message when deleting user', async () => {
-      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
-      const deleteResponse: MessageResponseDTO = { message: 'Usuario eliminado' };
-      service.delete.mockResolvedValue(deleteResponse);
-
-      await controller.delete(1);
-
-      expect(consoleSpy).toHaveBeenCalledWith('Eliminando usuario');
-      consoleSpy.mockRestore();
-    });
-  });
 
   describe('method verification', () => {
     it('should call service methods correctly', async () => {
@@ -133,13 +84,13 @@ describe('UsersController - Isolated', () => {
 
       await controller.findAll();
       await controller.register(registerDto);
-      await controller.update(1, updateDto);
-      await controller.delete(1);
+      await controller.update('1', updateDto);
+      await controller.delete('1');
 
       expect(service.findAll).toHaveBeenCalledTimes(1);
       expect(service.register).toHaveBeenCalledWith(registerDto);
-      expect(service.update).toHaveBeenCalledWith(1, updateDto);
-      expect(service.delete).toHaveBeenCalledWith(1);
+      expect(service.update).toHaveBeenCalledWith('1', updateDto);
+      expect(service.delete).toHaveBeenCalledWith('1');
     });
   });
 });
