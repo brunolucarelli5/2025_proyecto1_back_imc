@@ -1,13 +1,13 @@
 //ARCHIVO: users.service.ts
 import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { RegisterDTO } from './dto/register.dto';
-import { UserEntity } from './entities/user.entity';
 import { hashSync} from 'bcrypt';
 import { IUserRepository } from './repositories/users.repository.interface';
 import { UpdateUserDTO } from './dto/update-user.dto';
 import { MessageResponseDTO } from '../auth/dto/message-response.dto';
 import { UserResponseDto } from './dto/user-response.dto';
 import { validatePasswordStrength } from './helpers/validatePasswordStrength';
+import { User } from './schemas/user.schema';
 /*
   Si agregamos roles, será necesario agregar/modificar los métodos:
     • addPermission()
@@ -23,7 +23,7 @@ export class UsersService {
     private readonly userRepository: IUserRepository,
   ) { }
 
-  private toUserResponse(user: UserEntity): UserResponseDto {
+  private toUserResponse(user: User): UserResponseDto {
     return {
       id: user.id,
       email: user.email,
@@ -39,7 +39,7 @@ export class UsersService {
   }
 
   //Usado por auth.service en login()
-  async findByEmail(email: string): Promise<UserEntity | null> {
+  async findByEmail(email: string): Promise<User | null> {
     return await this.userRepository.findByEmail(email);
   }
 
@@ -53,15 +53,17 @@ export class UsersService {
       throw new BadRequestException('Ya existe un usuario con ese email');
     }
 
-    //Si pasamos las validaciones, creamos un nuevo objeto UserEntity con los datos de (body: RegisterDTO)
-    const user = Object.assign(new UserEntity(), body);
-    user.password = hashSync(user.password, 10); //Jamás guardamos contraseñas planas.
+    //Si pasamos las validaciones, creamos un nuevo objeto User con los datos de (body: RegisterDTO)
+    const user: Partial<User> = {
+      ...body,
+      password: hashSync(body.password, 10),  //Jamás guardamos contraseñas planas.
+    };
     
     const savedUser = await this.userRepository.save(user);
     return this.toUserResponse(savedUser);
   }
 
-  async update(id: number, body: UpdateUserDTO): Promise<UserResponseDto> {
+  async update(id: string, body: UpdateUserDTO): Promise<UserResponseDto> {
     //Todos los atributos son opcionales al actualizar. 
     // Si uno de estos atributos es una contraseña nueva, vamos a:
     if (body.password) {
@@ -83,7 +85,7 @@ export class UsersService {
     return this.toUserResponse(actualizado)  
   }
 
-  async delete(id: number): Promise<MessageResponseDTO> {
+  async delete(id: string): Promise<MessageResponseDTO> {
     const result = await this.userRepository.delete(id)
     if (!result) throw new NotFoundException('No se pudo eliminar el usuario. Verifica que la ID exista.');
     

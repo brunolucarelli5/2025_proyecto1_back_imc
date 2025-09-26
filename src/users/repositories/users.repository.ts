@@ -1,77 +1,64 @@
-//ARCHIVO: users.repository.ts
-import { Injectable, InternalServerErrorException } from "@nestjs/common";
-import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
 
-import { UserEntity } from "../entities/user.entity";
-import { IUserRepository } from "./users.repository.interface";
+import { User, UserDocument } from '../schemas/user.schema';
+import { IUserRepository } from './users.repository.interface';
 
 @Injectable()
 export class UserRepository implements IUserRepository {
+  constructor(
+    @InjectModel(User.name)
+    private readonly userModel: Model<UserDocument>,
+  ) {}
 
-    constructor(
-        @InjectRepository(UserEntity)
-        private readonly repo: Repository<UserEntity>,
-    ) {}
-
-
-    async findAll(): Promise<UserEntity[]> {
-        try {
-            return this.repo.find();
-        } catch (error) {
-            throw new InternalServerErrorException('Error al obtener todos los usuarios. ' + error);
-        }
-    }
-
-    async findByEmail(email: string): Promise<UserEntity | null> {
-        try {
-            return await this.repo.findOneBy({ email });
-        } catch (error) {
-            throw new InternalServerErrorException('Error al buscar usuario por email. ' + error);
-        }
-    }
-
-    async findById(id: number): Promise<UserEntity | null> {
-        try {
-            return await this.repo.findOneBy({ id });
-        } catch (error) {
-            throw new InternalServerErrorException('Error al buscar usuario por ID. ' + error);
-        }
-    }
-
-
-  async save(user: UserEntity): Promise<UserEntity> {
+  async findAll(): Promise<User[]> {
     try {
-      return await this.repo.save(user);
+      return await this.userModel.find().exec();
+    } catch (error) {
+      throw new InternalServerErrorException('Error al obtener todos los usuarios. ' + error);
+    }
+  }
+
+  async findByEmail(email: string): Promise<User | null> {
+    try {
+      return await this.userModel.findOne( {email} ).select('+password').exec();
+    } catch (error) {
+      throw new InternalServerErrorException('Error al buscar usuario por email. ' + error);
+    }
+  }
+
+  async findById(id: string): Promise<User | null> {
+    try {
+      return await this.userModel.findById(id).exec();
+    } catch (error) {
+      throw new InternalServerErrorException('Error al buscar usuario por ID. ' + error);
+    }
+  }
+
+  async save(user: Partial<User>): Promise<User> {
+    try {
+      const newUser = new this.userModel(user);
+      return await newUser.save();
     } catch (error) {
       throw new InternalServerErrorException('Error al guardar el usuario. ' + error);
     }
   }
 
-  async update(id: number, user: Partial<UserEntity>): Promise<UserEntity | null> {
+  async update(id: string, user: Partial<User>): Promise<User | null> {
     try {
-        await this.repo.update(id, user);
-        return await this.repo.findOneBy({ id })
+      return await this.userModel.findByIdAndUpdate(id, user, { new: true }).exec();
     } catch (error) {
-        throw new InternalServerErrorException('Error al actualizar el usuario. ' + error);
+      throw new InternalServerErrorException('Error al actualizar el usuario. ' + error);
     }
   }
 
-  async delete(id: number): Promise<boolean> {
+  async delete(id: string): Promise<boolean> {
     try {
-        /*
-            El método delete() de TypeORM devuelve un objeto DeleteResult. Su atributo .affected 
-            puede valer:
-                result.affected = 1: Se eliminó el registro.
-                result.affected = 0: El id no existía, entonces no se hizo nada.
-            Por eso hacemos la comparación lógica (result.affected !== 0), que puede ser:
-                true: significa que el resultado fue 1, entonces se eliminó exitosamente.
-                false: Significa que el resultado fue 0, entonces no se eliminó exitosamente.
-        */
-        const result = await this.repo.delete(id);
-        return (result.affected !== 0);
+      const result = await this.userModel.findByIdAndDelete(id).exec();
+      return !!result;
     } catch (error) {
-        throw new InternalServerErrorException('Error al eliminar el usuario. ' + error);
+      throw new InternalServerErrorException('Error al eliminar el usuario. ' + error);
     }
   }
 }

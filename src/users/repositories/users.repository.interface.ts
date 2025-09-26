@@ -1,11 +1,10 @@
-//ARCHIVO: users.repository.interface.ts
-import { UserEntity } from "src/users/entities/user.entity";
+import { User } from "../schemas/user.schema";
 
 export interface IUserRepository {
-    findByEmail(email: string): Promise<UserEntity | null>;
-    findById(id: number): Promise<UserEntity | null>;
-    findAll(): Promise<UserEntity[]>;
-    save(user: UserEntity): Promise<UserEntity>;
-    update(id: number, user: Partial<UserEntity>): Promise<UserEntity | null>;
-    delete(id: number): Promise<boolean>;
+    findByEmail(email: string): Promise<User | null>;
+    findById(id: string): Promise<User | null>;
+    findAll(): Promise<User[]>;
+    save(user: Partial<User>): Promise<User>;
+    update(id: string, user: Partial<User>): Promise<User | null>;
+    delete(id: string): Promise<boolean>;
 }
