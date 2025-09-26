@@ -9,35 +9,20 @@ import { UsersService } from '../users/users.service';
 describe('AuthModule', () => {
   let module: TestingModule;
 
-  // Mock UsersService since it's imported from UsersModule
-  const mockUsersService = {
-    findByEmail: jest.fn(),
-    findAll: jest.fn(),
-    register: jest.fn(),
-    update: jest.fn(),
-    delete: jest.fn(),
-  };
-
-  // Mock user repository since UsersModule needs it
-  const mockUserRepository = {
-    findAll: jest.fn(),
-    findByEmail: jest.fn(),
-    save: jest.fn(),
-    update: jest.fn(),
-    delete: jest.fn(),
-  };
-
-  // Mock ConfigService for JWT configuration
   const mockConfigService = {
     get: jest.fn((key: string) => {
       const config = {
-        'jwt.access.secret': 'accessSecret',
+        'jwt.access.secret': 'accessSecret123',
         'jwt.access.expiresIn': '15m',
-        'jwt.refresh.secret': 'refreshSecret',
-        'jwt.refresh.expiresIn': '1d',
+        'jwt.refresh.secret': 'refreshSecret456',
+        'jwt.refresh.expiresIn': '7d',
       };
       return config[key];
     }),
+  };
+
+  const mockUsersService = {
+    findByEmail: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -48,16 +33,12 @@ describe('AuthModule', () => {
         JwtService,
         AuthGuard,
         {
-          provide: UsersService,
-          useValue: mockUsersService,
-        },
-        {
-          provide: 'IUserRepository',
-          useValue: mockUserRepository,
-        },
-        {
           provide: ConfigService,
           useValue: mockConfigService,
+        },
+        {
+          provide: UsersService,
+          useValue: mockUsersService,
         },
       ],
     }).compile();
@@ -67,206 +48,169 @@ describe('AuthModule', () => {
     if (module) {
       await module.close();
     }
+    jest.clearAllMocks();
   });
 
   it('should compile the module successfully', () => {
     expect(module).toBeDefined();
   });
 
-  it('should have AuthController registered', () => {
-    const controller = module.get<AuthController>(AuthController);
-    expect(controller).toBeDefined();
-    expect(controller).toBeInstanceOf(AuthController);
-  });
+  describe('core components registration', () => {
+    it('should have AuthController registered', () => {
+      const controller = module.get<AuthController>(AuthController);
+      expect(controller).toBeDefined();
+      expect(controller).toBeInstanceOf(AuthController);
+    });
 
-  it('should have AuthService registered', () => {
-    const service = module.get<AuthService>(AuthService);
-    expect(service).toBeDefined();
-    expect(service).toBeInstanceOf(AuthService);
-  });
+    it('should have AuthService registered', () => {
+      const service = module.get<AuthService>(AuthService);
+      expect(service).toBeDefined();
+      expect(service).toBeInstanceOf(AuthService);
+    });
 
-  it('should have JwtService from JwtModule registered', () => {
-    const jwtService = module.get<JwtService>(JwtService);
-    expect(jwtService).toBeDefined();
-    expect(jwtService).toBeInstanceOf(JwtService);
-  });
+    it('should have JwtService registered', () => {
+      const jwtService = module.get<JwtService>(JwtService);
+      expect(jwtService).toBeDefined();
+      expect(jwtService).toBeInstanceOf(JwtService);
+    });
 
-  it('should have AuthGuard registered', () => {
-    const authGuard = module.get<AuthGuard>(AuthGuard);
-    expect(authGuard).toBeDefined();
-    expect(authGuard).toBeInstanceOf(AuthGuard);
-  });
-
-  it('should inject UsersService into AuthService', () => {
-    const authService = module.get<AuthService>(AuthService);
-    expect(authService).toBeDefined();
-
-    // AuthService should have login method (which requires UsersService)
-    expect(typeof authService.login).toBe('function');
-    expect(typeof authService.tokens).toBe('function');
-  });
-
-  it('should inject JwtService into AuthService', () => {
-    const authService = module.get<AuthService>(AuthService);
-    expect(authService).toBeDefined();
-
-    // AuthService methods should work (requiring JwtService)
-    expect(typeof authService.login).toBe('function');
-    expect(typeof authService.tokens).toBe('function');
-  });
-
-  it('should inject dependencies into AuthController', () => {
-    const controller = module.get<AuthController>(AuthController);
-    expect(controller).toBeDefined();
-
-    // Controller should have all required methods
-    expect(typeof controller.login).toBe('function');
-    expect(typeof controller.tokens).toBe('function');
-    expect(typeof controller.me).toBe('function');
-  });
-
-  it('should inject dependencies into AuthGuard', () => {
-    const guard = module.get<AuthGuard>(AuthGuard);
-    expect(guard).toBeDefined();
-
-    // Guard should have canActivate method
-    expect(typeof guard.canActivate).toBe('function');
-  });
-
-  it('should maintain singleton pattern for services', () => {
-    const authService1 = module.get<AuthService>(AuthService);
-    const authService2 = module.get<AuthService>(AuthService);
-    expect(authService1).toBe(authService2);
-
-    const jwtService1 = module.get<JwtService>(JwtService);
-    const jwtService2 = module.get<JwtService>(JwtService);
-    expect(jwtService1).toBe(jwtService2);
-
-    const authGuard1 = module.get<AuthGuard>(AuthGuard);
-    const authGuard2 = module.get<AuthGuard>(AuthGuard);
-    expect(authGuard1).toBe(authGuard2);
-  });
-
-  it('should be importable by other modules', async () => {
-    const testModule = await Test.createTestingModule({
-      controllers: [AuthController],
-      providers: [
-        AuthService,
-        JwtService,
-        AuthGuard,
-        {
-          provide: UsersService,
-          useValue: mockUsersService,
-        },
-        {
-          provide: 'IUserRepository',
-          useValue: mockUserRepository,
-        },
-        {
-          provide: ConfigService,
-          useValue: mockConfigService,
-        },
-      ],
-    }).compile();
-
-    const authService = testModule.get<AuthService>(AuthService);
-    expect(authService).toBeDefined();
-
-    await testModule.close();
-  });
-
-
-  it('should have correct module metadata structure', () => {
-    expect(module).toBeDefined();
-    expect(module.get<AuthService>(AuthService)).toBeDefined();
-    expect(module.get<AuthController>(AuthController)).toBeDefined();
-  });
-
-  it('should properly import required modules', () => {
-    // The module should compile successfully with all required imports
-    expect(module).toBeDefined();
-
-    // Verify that imported modules' services are available
-    expect(() => module.get<JwtService>(JwtService)).not.toThrow();
-  });
-
-
-  it('should handle circular dependencies correctly', () => {
-    // AuthModule imports UsersModule, which might need AuthGuard
-    // This test ensures no circular dependency issues
-    expect(module).toBeDefined();
-
-    const authService = module.get<AuthService>(AuthService);
-    const authGuard = module.get<AuthGuard>(AuthGuard);
-
-    expect(authService).toBeDefined();
-    expect(authGuard).toBeDefined();
-  });
-
-  it('should provide all required authentication components', () => {
-    // Verify all authentication-related components are available
-    const components = [AuthController, AuthService, JwtService, AuthGuard];
-
-    components.forEach((component) => {
-      expect(() => module.get(component)).not.toThrow();
-      expect(module.get(component)).toBeDefined();
+    it('should have AuthGuard registered', () => {
+      const guard = module.get<AuthGuard>(AuthGuard);
+      expect(guard).toBeDefined();
+      expect(guard).toBeInstanceOf(AuthGuard);
     });
   });
 
-  it('should maintain proper dependency injection chain', () => {
-    // Test the full dependency chain
-    const controller = module.get<AuthController>(AuthController);
-    const service = module.get<AuthService>(AuthService);
-    const jwtService = module.get<JwtService>(JwtService);
-    const guard = module.get<AuthGuard>(AuthGuard);
+  describe('dependency injection', () => {
+    it('should inject dependencies correctly into AuthService', () => {
+      const service = module.get<AuthService>(AuthService);
+      expect(service).toBeDefined();
 
-    expect(controller).toBeDefined();
-    expect(service).toBeDefined();
-    expect(jwtService).toBeDefined();
-    expect(guard).toBeDefined();
+      // Verify service has the expected methods
+      expect(typeof service.login).toBe('function');
+      expect(typeof service.tokens).toBe('function');
+    });
 
-    // Verify that controller can call service methods
-    expect(typeof controller.login).toBe('function');
-    expect(typeof service.login).toBe('function');
-    expect(typeof jwtService.generateToken).toBe('function');
-    expect(typeof guard.canActivate).toBe('function');
+    it('should inject dependencies correctly into AuthController', () => {
+      const controller = module.get<AuthController>(AuthController);
+      expect(controller).toBeDefined();
+
+      // Verify controller has the expected methods
+      expect(typeof controller.login).toBe('function');
+      expect(typeof controller.tokens).toBe('function');
+      expect(typeof controller.me).toBe('function');
+    });
+
+    it('should inject dependencies correctly into JwtService', () => {
+      const jwtService = module.get<JwtService>(JwtService);
+      expect(jwtService).toBeDefined();
+
+      // Verify JwtService has proper configuration
+      expect(jwtService.config).toBeDefined();
+      expect(jwtService.config.access).toBeDefined();
+      expect(jwtService.config.refresh).toBeDefined();
+
+      // Verify methods exist
+      expect(typeof jwtService.generateToken).toBe('function');
+      expect(typeof jwtService.refreshToken).toBe('function');
+      expect(typeof jwtService.getPayload).toBe('function');
+    });
+
+    it('should inject dependencies correctly into AuthGuard', () => {
+      const guard = module.get<AuthGuard>(AuthGuard);
+      expect(guard).toBeDefined();
+
+      // Verify guard has the required method
+      expect(typeof guard.canActivate).toBe('function');
+    });
   });
 
-  it('should handle module initialization and cleanup', async () => {
-    // Test module lifecycle
-    expect(module).toBeDefined();
+  describe('singleton pattern validation', () => {
+    it('should maintain singleton instances', () => {
+      const service1 = module.get<AuthService>(AuthService);
+      const service2 = module.get<AuthService>(AuthService);
+      expect(service1).toBe(service2);
 
-    // Module should be able to close without errors
-    await expect(module.close()).resolves.not.toThrow();
+      const controller1 = module.get<AuthController>(AuthController);
+      const controller2 = module.get<AuthController>(AuthController);
+      expect(controller1).toBe(controller2);
+
+      const jwt1 = module.get<JwtService>(JwtService);
+      const jwt2 = module.get<JwtService>(JwtService);
+      expect(jwt1).toBe(jwt2);
+    });
   });
 
-  it('should configure JWT service with correct settings', () => {
-    const jwtService = module.get<JwtService>(JwtService);
-    expect(jwtService).toBeDefined();
+  describe('module lifecycle', () => {
+    it('should handle module initialization correctly', () => {
+      expect(module).toBeDefined();
 
-    // Verify that JWT service has the expected configuration
-    expect(jwtService.config).toBeDefined();
-    expect(jwtService.config.access).toBeDefined();
-    expect(jwtService.config.refresh).toBeDefined();
+      // All core services should be available
+      expect(() => module.get<AuthService>(AuthService)).not.toThrow();
+      expect(() => module.get<AuthController>(AuthController)).not.toThrow();
+      expect(() => module.get<JwtService>(JwtService)).not.toThrow();
+      expect(() => module.get<AuthGuard>(AuthGuard)).not.toThrow();
+    });
+
+    it('should handle module cleanup correctly', async () => {
+      expect(module).toBeDefined();
+      await expect(module.close()).resolves.not.toThrow();
+    });
   });
 
-  it('should support authentication flow integration', () => {
-    // Test that all components work together
-    const controller = module.get<AuthController>(AuthController);
-    const service = module.get<AuthService>(AuthService);
-    const jwtService = module.get<JwtService>(JwtService);
-    const guard = module.get<AuthGuard>(AuthGuard);
+  describe('configuration validation', () => {
+    it('should provide correct JWT configuration', () => {
+      const jwtService = module.get<JwtService>(JwtService);
 
-    // All components should be ready for authentication flow
-    expect(controller).toBeDefined();
-    expect(service).toBeDefined();
-    expect(jwtService).toBeDefined();
-    expect(guard).toBeDefined();
+      expect(jwtService.config).toEqual({
+        access: {
+          secret: 'accessSecret123',
+          expiresIn: '15m',
+        },
+        refresh: {
+          secret: 'refreshSecret456',
+          expiresIn: '7d',
+        },
+      });
+    });
 
-    // Check that the flow methods exist
-    expect(typeof controller.login).toBe('function');
-    expect(typeof service.login).toBe('function');
-    expect(typeof jwtService.generateToken).toBe('function');
-    expect(typeof guard.canActivate).toBe('function');
+    it('should handle config service integration', () => {
+      expect(mockConfigService.get).toHaveBeenCalledWith('jwt.access.secret');
+      expect(mockConfigService.get).toHaveBeenCalledWith('jwt.access.expiresIn');
+      expect(mockConfigService.get).toHaveBeenCalledWith('jwt.refresh.secret');
+      expect(mockConfigService.get).toHaveBeenCalledWith('jwt.refresh.expiresIn');
+    });
+  });
+
+  describe('service integration validation', () => {
+    it('should enable complete auth workflow through integrated services', () => {
+      const controller = module.get<AuthController>(AuthController);
+      const service = module.get<AuthService>(AuthService);
+      const jwtService = module.get<JwtService>(JwtService);
+      const guard = module.get<AuthGuard>(AuthGuard);
+
+      // Verify the complete integration chain exists
+      expect(controller).toBeDefined();
+      expect(service).toBeDefined();
+      expect(jwtService).toBeDefined();
+      expect(guard).toBeDefined();
+
+      // Verify all services have their required methods for integration
+      expect(typeof service.login).toBe('function');
+      expect(typeof service.tokens).toBe('function');
+      expect(typeof jwtService.generateToken).toBe('function');
+      expect(typeof jwtService.refreshToken).toBe('function');
+      expect(typeof jwtService.getPayload).toBe('function');
+      expect(typeof guard.canActivate).toBe('function');
+    });
+
+    it('should support external service dependencies', () => {
+      const service = module.get<AuthService>(AuthService);
+      expect(service).toBeDefined();
+
+      // UsersService should be properly injected
+      expect(mockUsersService).toBeDefined();
+      expect(typeof mockUsersService.findByEmail).toBe('function');
+    });
   });
 });

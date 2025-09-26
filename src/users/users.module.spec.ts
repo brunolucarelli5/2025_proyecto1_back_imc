@@ -10,7 +10,6 @@ import { JwtService } from '../auth/jwt/jwt.service';
 describe('UsersModule', () => {
   let module: TestingModule;
 
-  // Mock repositories and services
   const mockUserRepository = {
     findAll: jest.fn(),
     findByEmail: jest.fn(),
@@ -74,71 +73,26 @@ describe('UsersModule', () => {
     expect(module).toBeDefined();
   });
 
-  it('should have UsersController registered', () => {
+  it('should have all core components registered and maintain singleton pattern', () => {
     const controller = module.get<UsersController>(UsersController);
+    const service = module.get<UsersService>(UsersService);
+    const jwtService = module.get<JwtService>(JwtService);
+
     expect(controller).toBeDefined();
     expect(controller).toBeInstanceOf(UsersController);
-  });
-
-  it('should have UsersService registered', () => {
-    const service = module.get<UsersService>(UsersService);
     expect(service).toBeDefined();
     expect(service).toBeInstanceOf(UsersService);
-  });
+    expect(jwtService).toBeDefined();
+    expect(jwtService).toBeInstanceOf(JwtService);
 
-  it('should provide IUserRepository correctly', () => {
-    const repository = module.get('IUserRepository');
-    expect(repository).toBeDefined();
-  });
-
-  it('should inject repository dependency into service', () => {
-    const service = module.get<UsersService>(UsersService);
-    expect(service).toBeDefined();
-
-    // Service should be properly instantiated with its dependencies
-    expect(typeof service.findAll).toBe('function');
-    expect(typeof service.findByEmail).toBe('function');
-    expect(typeof service.register).toBe('function');
-    expect(typeof service.update).toBe('function');
-    expect(typeof service.delete).toBe('function');
-  });
-
-  it('should inject service dependency into controller', () => {
-    const controller = module.get<UsersController>(UsersController);
-    expect(controller).toBeDefined();
-
-    // Controller should have access to service methods
-    expect(typeof controller.findAll).toBe('function');
-    expect(typeof controller.register).toBe('function');
-    expect(typeof controller.update).toBe('function');
-    expect(typeof controller.delete).toBe('function');
-  });
-
-  it('should maintain singleton pattern for services', () => {
-    const service1 = module.get<UsersService>(UsersService);
+    // Test singleton pattern
     const service2 = module.get<UsersService>(UsersService);
-    expect(service1).toBe(service2);
-
-    const controller1 = module.get<UsersController>(UsersController);
-    const controller2 = module.get<UsersController>(UsersController);
-    expect(controller1).toBe(controller2);
+    expect(service).toBe(service2);
   });
 
-
-
-  it('should have correct module metadata structure', () => {
-    expect(module).toBeDefined();
-    expect(module.get<UsersService>(UsersService)).toBeDefined();
-    expect(module.get<UsersController>(UsersController)).toBeDefined();
-  });
-
-
-  it('should handle repository pattern correctly', () => {
+  it('should provide IUserRepository correctly with all required methods', () => {
     const repository = module.get('IUserRepository');
-    const service = module.get<UsersService>(UsersService);
-
     expect(repository).toBeDefined();
-    expect(service).toBeDefined();
 
     // Repository should have all required methods
     expect(typeof repository.findAll).toBe('function');
@@ -148,33 +102,50 @@ describe('UsersModule', () => {
     expect(typeof repository.delete).toBe('function');
   });
 
-  it('should properly configure dependency injection tokens', () => {
-    // Test that the correct tokens are used for dependency injection
-    expect(() => {
-      module.get('IUserRepository');
-    }).not.toThrow();
+  it('should inject dependencies correctly and have proper method access', () => {
+    const service = module.get<UsersService>(UsersService);
+    const controller = module.get<UsersController>(UsersController);
 
-    expect(() => {
-      module.get(UsersService);
-    }).not.toThrow();
+    // Service should be properly instantiated with its dependencies
+    expect(typeof service.findAll).toBe('function');
+    expect(typeof service.findByEmail).toBe('function');
+    expect(typeof service.register).toBe('function');
+    expect(typeof service.update).toBe('function');
+    expect(typeof service.delete).toBe('function');
 
-    expect(() => {
-      module.get(UsersController);
-    }).not.toThrow();
+    // Controller should have access to service methods
+    expect(typeof controller.findAll).toBe('function');
+    expect(typeof controller.register).toBe('function');
+    expect(typeof controller.update).toBe('function');
+    expect(typeof controller.delete).toBe('function');
+
+    // Test dependency injection tokens
+    expect(() => module.get('IUserRepository')).not.toThrow();
+    expect(() => module.get(UsersService)).not.toThrow();
+    expect(() => module.get(UsersController)).not.toThrow();
+    expect(() => module.get(JwtService)).not.toThrow();
   });
 
-  it('should handle module initialization and cleanup', async () => {
+  it('should handle module lifecycle and support complete injection chain', async () => {
     // Test module lifecycle
     expect(module).toBeDefined();
 
+    // Verify all components are accessible
+    const repository = module.get('IUserRepository');
+    const service = module.get<UsersService>(UsersService);
+    const controller = module.get<UsersController>(UsersController);
+    const jwtService = module.get<JwtService>(JwtService);
+
+    expect(repository).toBeDefined();
+    expect(service).toBeDefined();
+    expect(controller).toBeDefined();
+    expect(jwtService).toBeDefined();
+
+    // Verify the injection chain works
+    expect(typeof service.findAll).toBe('function');
+    expect(typeof controller.findAll).toBe('function');
+
     // Module should be able to close without errors
     await expect(module.close()).resolves.not.toThrow();
-  });
-
-  it('should provide JwtService and maintain dependency injection', () => {
-    const jwtService = module.get<JwtService>(JwtService);
-    expect(jwtService).toBeDefined();
-    expect(jwtService).toBeInstanceOf(JwtService);
-    expect(() => module.get('IUserRepository')).not.toThrow();
   });
 });

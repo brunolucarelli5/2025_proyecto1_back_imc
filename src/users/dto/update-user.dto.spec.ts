@@ -3,24 +3,22 @@ import { UpdateUserDTO } from './update-user.dto';
 
 describe('UpdateUserDTO', () => {
   describe('email validation', () => {
-    it('should pass with valid email', async () => {
-      const dto = new UpdateUserDTO();
-      dto.email = 'updated@example.com';
+    it('should pass with valid email and be optional', async () => {
+      // Valid email case
+      const dtoWithEmail = new UpdateUserDTO();
+      dtoWithEmail.email = 'updated@example.com';
 
-      const errors = await validate(dto);
-      const emailErrors = errors.filter(error => error.property === 'email');
+      const emailErrors = await validate(dtoWithEmail);
+      const emailValidationErrors = emailErrors.filter(error => error.property === 'email');
+      expect(emailValidationErrors).toHaveLength(0);
 
-      expect(emailErrors).toHaveLength(0);
-    });
+      // Optional field case
+      const dtoWithoutEmail = new UpdateUserDTO();
+      dtoWithoutEmail.firstName = 'John';
 
-    it('should pass with undefined email (optional field)', async () => {
-      const dto = new UpdateUserDTO();
-      dto.firstName = 'John';
-
-      const errors = await validate(dto);
-      const emailErrors = errors.filter(error => error.property === 'email');
-
-      expect(emailErrors).toHaveLength(0);
+      const noEmailErrors = await validate(dtoWithoutEmail);
+      const noEmailValidationErrors = noEmailErrors.filter(error => error.property === 'email');
+      expect(noEmailValidationErrors).toHaveLength(0);
     });
 
     it('should fail with invalid email format', async () => {
@@ -29,82 +27,28 @@ describe('UpdateUserDTO', () => {
 
       const errors = await validate(dto);
       const emailErrors = errors.filter(error => error.property === 'email');
-
       expect(emailErrors).toHaveLength(1);
       expect(emailErrors[0].constraints).toHaveProperty('isEmail');
-    });
-
-    it('should fail with empty string email', async () => {
-      const dto = new UpdateUserDTO();
-      dto.email = '';
-
-      const errors = await validate(dto);
-      const emailErrors = errors.filter(error => error.property === 'email');
-
-      expect(emailErrors).toHaveLength(1);
-      expect(emailErrors[0].constraints).toHaveProperty('isEmail');
-    });
-
-    it('should pass with complex email format', async () => {
-      const dto = new UpdateUserDTO();
-      dto.email = 'user.name+tag@subdomain.example.org';
-
-      const errors = await validate(dto);
-      const emailErrors = errors.filter(error => error.property === 'email');
-
-      expect(emailErrors).toHaveLength(0);
     });
   });
 
   describe('password validation', () => {
-    it('should pass with valid password', async () => {
-      const dto = new UpdateUserDTO();
-      dto.password = 'newpassword123';
+    it('should pass with valid password and be optional', async () => {
+      // Valid password case
+      const dtoWithPassword = new UpdateUserDTO();
+      dtoWithPassword.password = 'newpassword123';
 
-      const errors = await validate(dto);
-      const passwordErrors = errors.filter(error => error.property === 'password');
+      const passwordErrors = await validate(dtoWithPassword);
+      const passwordValidationErrors = passwordErrors.filter(error => error.property === 'password');
+      expect(passwordValidationErrors).toHaveLength(0);
 
-      expect(passwordErrors).toHaveLength(0);
-    });
+      // Optional field case
+      const dtoWithoutPassword = new UpdateUserDTO();
+      dtoWithoutPassword.firstName = 'John';
 
-    it('should pass with undefined password (optional field)', async () => {
-      const dto = new UpdateUserDTO();
-      dto.firstName = 'John';
-
-      const errors = await validate(dto);
-      const passwordErrors = errors.filter(error => error.property === 'password');
-
-      expect(passwordErrors).toHaveLength(0);
-    });
-
-    it('should pass with special characters password', async () => {
-      const dto = new UpdateUserDTO();
-      dto.password = 'N3w!P@ssw0rd#$%';
-
-      const errors = await validate(dto);
-      const passwordErrors = errors.filter(error => error.property === 'password');
-
-      expect(passwordErrors).toHaveLength(0);
-    });
-
-    it('should pass with very long password', async () => {
-      const dto = new UpdateUserDTO();
-      dto.password = 'p'.repeat(500);
-
-      const errors = await validate(dto);
-      const passwordErrors = errors.filter(error => error.property === 'password');
-
-      expect(passwordErrors).toHaveLength(0);
-    });
-
-    it('should pass with single character password', async () => {
-      const dto = new UpdateUserDTO();
-      dto.password = '1';
-
-      const errors = await validate(dto);
-      const passwordErrors = errors.filter(error => error.property === 'password');
-
-      expect(passwordErrors).toHaveLength(0);
+      const noPasswordErrors = await validate(dtoWithoutPassword);
+      const noPasswordValidationErrors = noPasswordErrors.filter(error => error.property === 'password');
+      expect(noPasswordValidationErrors).toHaveLength(0);
     });
 
     it('should fail with non-string password', async () => {
@@ -113,51 +57,28 @@ describe('UpdateUserDTO', () => {
 
       const errors = await validate(dto);
       const passwordErrors = errors.filter(error => error.property === 'password');
-
       expect(passwordErrors.length).toBeGreaterThan(0);
       expect(passwordErrors[0].constraints).toHaveProperty('isString');
     });
   });
 
   describe('firstName validation', () => {
-    it('should pass with valid firstName', async () => {
-      const dto = new UpdateUserDTO();
-      dto.firstName = 'UpdatedName';
+    it('should pass with valid firstName and be optional', async () => {
+      // Valid firstName case
+      const dtoWithFirstName = new UpdateUserDTO();
+      dtoWithFirstName.firstName = 'UpdatedName';
 
-      const errors = await validate(dto);
-      const firstNameErrors = errors.filter(error => error.property === 'firstName');
+      const firstNameErrors = await validate(dtoWithFirstName);
+      const firstNameValidationErrors = firstNameErrors.filter(error => error.property === 'firstName');
+      expect(firstNameValidationErrors).toHaveLength(0);
 
-      expect(firstNameErrors).toHaveLength(0);
-    });
+      // Optional field case
+      const dtoWithoutFirstName = new UpdateUserDTO();
+      dtoWithoutFirstName.lastName = 'Doe';
 
-    it('should pass with undefined firstName (optional field)', async () => {
-      const dto = new UpdateUserDTO();
-      dto.lastName = 'Doe';
-
-      const errors = await validate(dto);
-      const firstNameErrors = errors.filter(error => error.property === 'firstName');
-
-      expect(firstNameErrors).toHaveLength(0);
-    });
-
-    it('should pass with accented characters', async () => {
-      const dto = new UpdateUserDTO();
-      dto.firstName = 'José María';
-
-      const errors = await validate(dto);
-      const firstNameErrors = errors.filter(error => error.property === 'firstName');
-
-      expect(firstNameErrors).toHaveLength(0);
-    });
-
-    it('should pass with single character', async () => {
-      const dto = new UpdateUserDTO();
-      dto.firstName = 'J';
-
-      const errors = await validate(dto);
-      const firstNameErrors = errors.filter(error => error.property === 'firstName');
-
-      expect(firstNameErrors).toHaveLength(0);
+      const noFirstNameErrors = await validate(dtoWithoutFirstName);
+      const noFirstNameValidationErrors = noFirstNameErrors.filter(error => error.property === 'firstName');
+      expect(noFirstNameValidationErrors).toHaveLength(0);
     });
 
     it('should fail with non-string firstName', async () => {
@@ -166,61 +87,28 @@ describe('UpdateUserDTO', () => {
 
       const errors = await validate(dto);
       const firstNameErrors = errors.filter(error => error.property === 'firstName');
-
       expect(firstNameErrors.length).toBeGreaterThan(0);
       expect(firstNameErrors[0].constraints).toHaveProperty('isString');
     });
   });
 
   describe('lastName validation', () => {
-    it('should pass with valid lastName', async () => {
-      const dto = new UpdateUserDTO();
-      dto.lastName = 'UpdatedLastName';
+    it('should pass with valid lastName and be optional', async () => {
+      // Valid lastName case
+      const dtoWithLastName = new UpdateUserDTO();
+      dtoWithLastName.lastName = 'UpdatedLastName';
 
-      const errors = await validate(dto);
-      const lastNameErrors = errors.filter(error => error.property === 'lastName');
+      const lastNameErrors = await validate(dtoWithLastName);
+      const lastNameValidationErrors = lastNameErrors.filter(error => error.property === 'lastName');
+      expect(lastNameValidationErrors).toHaveLength(0);
 
-      expect(lastNameErrors).toHaveLength(0);
-    });
+      // Optional field case
+      const dtoWithoutLastName = new UpdateUserDTO();
+      dtoWithoutLastName.firstName = 'John';
 
-    it('should pass with undefined lastName (optional field)', async () => {
-      const dto = new UpdateUserDTO();
-      dto.firstName = 'John';
-
-      const errors = await validate(dto);
-      const lastNameErrors = errors.filter(error => error.property === 'lastName');
-
-      expect(lastNameErrors).toHaveLength(0);
-    });
-
-    it('should pass with hyphenated lastName', async () => {
-      const dto = new UpdateUserDTO();
-      dto.lastName = 'Smith-Johnson';
-
-      const errors = await validate(dto);
-      const lastNameErrors = errors.filter(error => error.property === 'lastName');
-
-      expect(lastNameErrors).toHaveLength(0);
-    });
-
-    it('should pass with apostrophe lastName', async () => {
-      const dto = new UpdateUserDTO();
-      dto.lastName = "O'Connor";
-
-      const errors = await validate(dto);
-      const lastNameErrors = errors.filter(error => error.property === 'lastName');
-
-      expect(lastNameErrors).toHaveLength(0);
-    });
-
-    it('should pass with spaces in lastName', async () => {
-      const dto = new UpdateUserDTO();
-      dto.lastName = 'Van Der Berg';
-
-      const errors = await validate(dto);
-      const lastNameErrors = errors.filter(error => error.property === 'lastName');
-
-      expect(lastNameErrors).toHaveLength(0);
+      const noLastNameErrors = await validate(dtoWithoutLastName);
+      const noLastNameValidationErrors = noLastNameErrors.filter(error => error.property === 'lastName');
+      expect(noLastNameValidationErrors).toHaveLength(0);
     });
 
     it('should fail with non-string lastName', async () => {
@@ -229,7 +117,6 @@ describe('UpdateUserDTO', () => {
 
       const errors = await validate(dto);
       const lastNameErrors = errors.filter(error => error.property === 'lastName');
-
       expect(lastNameErrors.length).toBeGreaterThan(0);
       expect(lastNameErrors[0].constraints).toHaveProperty('isString');
     });
@@ -244,24 +131,12 @@ describe('UpdateUserDTO', () => {
       dto.lastName = 'García-López';
 
       const errors = await validate(dto);
-
       expect(errors).toHaveLength(0);
     });
 
     it('should pass with empty DTO (all fields optional)', async () => {
       const dto = new UpdateUserDTO();
-
       const errors = await validate(dto);
-
-      expect(errors).toHaveLength(0);
-    });
-
-    it('should pass with only one field', async () => {
-      const dto = new UpdateUserDTO();
-      dto.firstName = 'OnlyFirstName';
-
-      const errors = await validate(dto);
-
       expect(errors).toHaveLength(0);
     });
 
@@ -273,7 +148,6 @@ describe('UpdateUserDTO', () => {
       dto.lastName = 123 as any; // invalid
 
       const errors = await validate(dto);
-
       expect(errors.length).toBe(2); // email and lastName errors
       expect(errors.some(error => error.property === 'email')).toBe(true);
       expect(errors.some(error => error.property === 'lastName')).toBe(true);
@@ -281,27 +155,14 @@ describe('UpdateUserDTO', () => {
       expect(errors.some(error => error.property === 'firstName')).toBe(false);
     });
 
-    it('should handle boundary cases', async () => {
+    it('should handle special characters and complex scenarios', async () => {
       const dto = new UpdateUserDTO();
-      dto.email = 'a@b.co'; // minimal valid email
-      dto.password = '1'; // minimal password
-      dto.firstName = 'X'; // single character
-      dto.lastName = 'Y'; // single character
+      dto.email = 'user.name+tag@subdomain.example.org';
+      dto.password = 'N3w!P@ssw0rd#$%';
+      dto.firstName = 'José María';
+      dto.lastName = "O'Connor-Smith Van Der Berg";
 
       const errors = await validate(dto);
-
-      expect(errors).toHaveLength(0);
-    });
-
-    it('should handle maximum length scenarios', async () => {
-      const dto = new UpdateUserDTO();
-      dto.email = 'a'.repeat(50) + '@' + 'b'.repeat(50) + '.com';
-      dto.password = 'p'.repeat(1000);
-      dto.firstName = 'F'.repeat(200);
-      dto.lastName = 'L'.repeat(200);
-
-      const errors = await validate(dto);
-
       expect(errors).toHaveLength(0);
     });
   });

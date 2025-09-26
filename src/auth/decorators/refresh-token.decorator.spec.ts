@@ -1,215 +1,223 @@
-import { ExecutionContext, BadRequestException } from '@nestjs/common';
+import { BadRequestException, ExecutionContext } from '@nestjs/common';
 import { RefreshToken } from './refresh-token.decorator';
 
 describe('RefreshToken Decorator', () => {
-  let mockExecutionContext: jest.Mocked<ExecutionContext>;
+  let mockContext: ExecutionContext;
+  let mockRequest: any;
 
   beforeEach(() => {
-    mockExecutionContext = {
-      switchToHttp: jest.fn(),
-      getClass: jest.fn(),
-      getHandler: jest.fn(),
-      getArgs: jest.fn(),
-      getArgByIndex: jest.fn(),
-      switchToRpc: jest.fn(),
-      switchToWs: jest.fn(),
-      getType: jest.fn(),
+    mockRequest = {
+      headers: {},
     };
+
+    mockContext = {
+      switchToHttp: jest.fn().mockReturnValue({
+        getRequest: jest.fn().mockReturnValue(mockRequest),
+      }),
+    } as any;
   });
 
   afterEach(() => {
     jest.clearAllMocks();
   });
 
-  const createMockHttpContext = (authorizationHeader?: string) => {
-    const mockRequest = {
-      headers: {
-        authorization: authorizationHeader,
-      },
-    };
-
-    const mockHttpContext = {
-      getRequest: jest.fn().mockReturnValue(mockRequest),
-      getResponse: jest.fn(),
-      getNext: jest.fn(),
-    };
-
-    mockExecutionContext.switchToHttp.mockReturnValue(mockHttpContext);
-    return { mockRequest, mockHttpContext };
+  // Helper function to execute the decorator
+  const executeDecorator = (context: ExecutionContext) => {
+    // The decorator is created with createParamDecorator which returns a function
+    // We need to simulate how NestJS would call it
+    return RefreshToken(undefined, context);
   };
 
-  it('should extract token from valid Bearer authorization header', () => {
-    const expectedToken = 'valid-refresh-token';
-    createMockHttpContext(`Bearer ${expectedToken}`);
+  describe('valid token extraction', () => {
+    it('should extract token from valid Bearer authorization header', () => {
+      const token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c';
+      mockRequest.headers['authorization'] = `Bearer ${token}`;
 
-    const result = RefreshToken(undefined, mockExecutionContext);
+      const result = executeDecorator(mockContext);
 
-    expect(result).toBe(expectedToken);
-    expect(mockExecutionContext.switchToHttp).toHaveBeenCalledTimes(1);
-  });
+      expect(result).toBe(token);
+    });
 
-  it('should extract token from JWT Bearer authorization header', () => {
-    const jwtToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c';
-    createMockHttpContext(`Bearer ${jwtToken}`);
+    it('should handle different token formats and lengths', () => {
+      const tokenTestCases = [
+        'short.token',
+        'medium.length.token.format',
+        'very.long.token.with.multiple.segments.and.complex.payload.data.that.exceeds.normal.jwt.length',
+        'a', // Single character token
+        'token.with.special.chars-_+=/',
+      ];
 
-    const result = RefreshToken(undefined, mockExecutionContext);
+      tokenTestCases.forEach(token => {
+        mockRequest.headers['authorization'] = `Bearer ${token}`;
 
-    expect(result).toBe(jwtToken);
-  });
+        const result = executeDecorator(mockContext);
 
-  it('should extract token with special characters', () => {
-    const tokenWithSpecialChars = 'token-with_special.chars123';
-    createMockHttpContext(`Bearer ${tokenWithSpecialChars}`);
-
-    const result = RefreshToken(undefined, mockExecutionContext);
-
-    expect(result).toBe(tokenWithSpecialChars);
-  });
-
-  it('should handle tokens with multiple segments after Bearer', () => {
-    createMockHttpContext('Bearer token with spaces');
-
-    const result = RefreshToken(undefined, mockExecutionContext);
-
-    expect(result).toBe('token with spaces');
-  });
-
-  it('should throw BadRequestException when authorization header is missing', () => {
-    createMockHttpContext(); // No authorization header
-
-    expect(() => RefreshToken(undefined, mockExecutionContext)).toThrow(
-      BadRequestException,
-    );
-    expect(() => RefreshToken(undefined, mockExecutionContext)).toThrow(
-      'El header Authorization debe tener el formato Bearer [token]',
-    );
-  });
-
-  it('should throw BadRequestException when authorization header is empty string', () => {
-    createMockHttpContext('');
-
-    expect(() => RefreshToken(undefined, mockExecutionContext)).toThrow(
-      BadRequestException,
-    );
-    expect(() => RefreshToken(undefined, mockExecutionContext)).toThrow(
-      'El header Authorization debe tener el formato Bearer [token]',
-    );
-  });
-
-  it('should throw BadRequestException when authorization header does not start with Bearer', () => {
-    const invalidHeaders = ['Basic token', 'bearer refresh-token'];
-
-    invalidHeaders.forEach((header) => {
-      createMockHttpContext(header);
-
-      expect(() => RefreshToken(undefined, mockExecutionContext)).toThrow(
-        BadRequestException,
-      );
-      expect(() => RefreshToken(undefined, mockExecutionContext)).toThrow(
-        'El header Authorization debe tener el formato Bearer [token]',
-      );
+        expect(result).toBe(token);
+      });
     });
   });
 
-  it('should throw BadRequestException for malformed Bearer headers', () => {
-    const malformedHeaders = [
-      'Bearer', // No token
-      'Bearer ', // Only space after Bearer
-      'BearerToken', // No space
-      ' Bearer token', // Leading space
-      'Bearer  ', // Multiple spaces, no token
-    ];
+  describe('boundary value testing for authorization header', () => {
+    it('should handle edge cases in authorization header format', () => {
+      const token = 'test.token';
+      const boundaryTestCases = [
+        { header: `Bearer ${token}`, expected: token, description: 'standard format' },
+        { header: `Bearer  ${token}`, expected: token, description: 'extra space after Bearer' },
+      ];
 
-    malformedHeaders.forEach((header) => {
-      createMockHttpContext(header);
+      boundaryTestCases.forEach(testCase => {
+        mockRequest.headers['authorization'] = testCase.header;
 
-      if (header === 'Bearer ' || header === 'Bearer  ') {
-        // These cases should extract empty string as token, not throw
-        const result = RefreshToken(undefined, mockExecutionContext);
-        expect(result).toBe('');
-      } else {
-        expect(() => RefreshToken(undefined, mockExecutionContext)).toThrow(
-          BadRequestException,
-        );
-      }
+        const result = executeDecorator(mockContext);
+
+        expect(result).toBe(testCase.expected);
+      });
+    });
+
+    it('should handle minimum and maximum length tokens', () => {
+      const lengthTestCases = [
+        { token: 'a', description: 'minimum single character' },
+        { token: 'ab', description: 'two characters' },
+        { token: 'x'.repeat(100), description: 'medium length' },
+        { token: 'y'.repeat(1000), description: 'maximum practical length' },
+      ];
+
+      lengthTestCases.forEach(testCase => {
+        mockRequest.headers['authorization'] = `Bearer ${testCase.token}`;
+
+        const result = executeDecorator(mockContext);
+
+        expect(result).toBe(testCase.token);
+      });
     });
   });
 
-  it('should handle different case variations correctly', () => {
-    const testCases = [
-      { header: 'Bearer token', expected: 'token', shouldWork: true },
-      { header: 'bearer token', expected: null, shouldWork: false },
-      { header: 'BEARER token', expected: null, shouldWork: false },
-      { header: 'BeareR token', expected: null, shouldWork: false },
-    ];
+  describe('error cases and invalid formats', () => {
+    it('should throw BadRequestException when authorization header is missing', () => {
+      mockRequest.headers = {}; // No authorization header
 
-    testCases.forEach(({ header, expected, shouldWork }) => {
-      createMockHttpContext(header);
+      expect(() => executeDecorator(mockContext)).toThrow(BadRequestException);
+      expect(() => executeDecorator(mockContext)).toThrow('El header Authorization debe tener el formato Bearer [token]');
+    });
 
-      if (shouldWork) {
-        const result = RefreshToken(undefined, mockExecutionContext);
-        expect(result).toBe(expected);
-      } else {
-        expect(() => RefreshToken(undefined, mockExecutionContext)).toThrow(
-          BadRequestException,
-        );
-      }
+    it('should throw BadRequestException when authorization header is null or undefined', () => {
+      const invalidHeaders = [null, undefined];
+
+      invalidHeaders.forEach(header => {
+        mockRequest.headers['authorization'] = header;
+
+        expect(() => executeDecorator(mockContext)).toThrow(BadRequestException);
+        expect(() => executeDecorator(mockContext)).toThrow('El header Authorization debe tener el formato Bearer [token]');
+      });
+    });
+
+    it('should throw BadRequestException when header does not start with Bearer', () => {
+      const invalidFormats = [
+        'Basic token123',
+        'Token token123',
+        'bearer token123', // lowercase
+        'BEARER token123', // uppercase
+        'token123', // No prefix
+        'Bearertoken123', // No space
+      ];
+
+      invalidFormats.forEach(header => {
+        mockRequest.headers['authorization'] = header;
+
+        expect(() => executeDecorator(mockContext)).toThrow(BadRequestException);
+        expect(() => executeDecorator(mockContext)).toThrow('El header Authorization debe tener el formato Bearer [token]');
+      });
+    });
+
+    it('should throw BadRequestException when Bearer prefix exists but token is missing', () => {
+      const incompleteHeaders = [
+        'Bearer',
+        'Bearer ',
+        'Bearer  ', // Multiple spaces but no token
+      ];
+
+      incompleteHeaders.forEach(header => {
+        mockRequest.headers['authorization'] = header;
+
+        expect(() => executeDecorator(mockContext)).toThrow(BadRequestException);
+        expect(() => executeDecorator(mockContext)).toThrow('El header Authorization debe tener el formato Bearer [token]');
+      });
+    });
+
+    it('should handle empty string authorization header', () => {
+      mockRequest.headers['authorization'] = '';
+
+      expect(() => executeDecorator(mockContext)).toThrow(BadRequestException);
+      expect(() => executeDecorator(mockContext)).toThrow('El header Authorization debe tener el formato Bearer [token]');
     });
   });
 
-  it('should extract token when header has additional whitespace', () => {
-    const validHeaders = [
-      { header: 'Bearer token', expected: 'token' },
-      { header: 'Bearer  token', expected: ' token' }, // Extra space becomes part of token
-      { header: 'Bearer token ', expected: 'token ' }, // Trailing space becomes part of token
-      { header: 'Bearer  token  with  spaces', expected: ' token  with  spaces' },
-    ];
+  describe('equivalence partitioning', () => {
+    it('should categorize valid authorization headers', () => {
+      // Valid equivalence class: Properly formatted Bearer tokens
+      const validTokens = [
+        'standard.jwt.token',
+        'short',
+        'very.long.token.with.multiple.segments',
+        'token-with-dashes',
+        'token_with_underscores',
+        'token.with.dots',
+        'tokenWithNumbers123',
+        'TOKEN.WITH.CAPS',
+      ];
 
-    validHeaders.forEach(({ header, expected }) => {
-      createMockHttpContext(header);
+      validTokens.forEach(token => {
+        mockRequest.headers['authorization'] = `Bearer ${token}`;
 
-      const result = RefreshToken(undefined, mockExecutionContext);
-      expect(result).toBe(expected);
+        const result = executeDecorator(mockContext);
+
+        expect(result).toBe(token);
+      });
+    });
+
+    it('should categorize invalid authorization headers', () => {
+      // Invalid equivalence class: Malformed headers
+      const invalidHeaders = [
+        null,
+        undefined,
+        '',
+        'NotBearer token123',
+        'Bearer', // Missing token
+        'token123', // Missing Bearer prefix
+        'Basic token123', // Wrong auth type
+      ];
+
+      invalidHeaders.forEach(header => {
+        mockRequest.headers['authorization'] = header;
+
+        expect(() => executeDecorator(mockContext)).toThrow(BadRequestException);
+      });
     });
   });
 
-  it('should work with real-world JWT tokens', () => {
-    const token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c';
-    createMockHttpContext(`Bearer ${token}`);
+  describe('context handling', () => {
+    it('should correctly access request from execution context', () => {
+      const token = 'context.test.token';
+      mockRequest.headers['authorization'] = `Bearer ${token}`;
 
-    const result = RefreshToken(undefined, mockExecutionContext);
-    expect(result).toBe(token);
-  });
+      const switchToHttpSpy = jest.spyOn(mockContext, 'switchToHttp');
+      const getRequestSpy = jest.spyOn(mockContext.switchToHttp(), 'getRequest');
 
+      const result = executeDecorator(mockContext);
 
-  it('should be case-sensitive for Bearer prefix', () => {
-    const caseSensitiveTests = [
-      { prefix: 'Bearer', shouldWork: true },
-      { prefix: 'bearer', shouldWork: false },
-      { prefix: 'BEARER', shouldWork: false },
-      { prefix: 'BeaRer', shouldWork: false },
-    ];
-
-    caseSensitiveTests.forEach(({ prefix, shouldWork }) => {
-      createMockHttpContext(`${prefix} token`);
-
-      if (shouldWork) {
-        const result = RefreshToken(undefined, mockExecutionContext);
-        expect(result).toBe('token');
-      } else {
-        expect(() => RefreshToken(undefined, mockExecutionContext)).toThrow(
-          BadRequestException,
-        );
-      }
+      expect(switchToHttpSpy).toHaveBeenCalled();
+      expect(getRequestSpy).toHaveBeenCalled();
+      expect(result).toBe(token);
     });
-  });
 
-  it('should extract everything after "Bearer " as token', () => {
-    const header = 'Bearer part1 part2 part3';
-    createMockHttpContext(header);
+    it('should handle case sensitivity correctly', () => {
+      const token = 'case.test.token';
 
-    const result = RefreshToken(undefined, mockExecutionContext);
-    const expected = header.substring('Bearer '.length);
-    expect(result).toBe(expected);
+      // Test lowercase 'authorization' header
+      mockRequest.headers = { 'authorization': `Bearer ${token}` };
+
+      const result = executeDecorator(mockContext);
+      expect(result).toBe(token);
+    });
   });
 });

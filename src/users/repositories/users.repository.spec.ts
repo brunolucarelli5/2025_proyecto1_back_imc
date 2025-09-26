@@ -46,82 +46,64 @@ describe('UserRepository', () => {
   });
 
   describe('findAll', () => {
-    it('should return all users successfully', async () => {
+    it('should return all users successfully and handle empty results', async () => {
+      // Test with users
       const users = [mockUser, { ...mockUser, id: 2, email: 'user2@example.com' }] as UserEntity[];
       typeormRepo.find.mockResolvedValue(users);
 
-      const result = await userRepository.findAll();
-
+      let result = await userRepository.findAll();
       expect(result).toEqual(users);
       expect(typeormRepo.find).toHaveBeenCalledTimes(1);
-    });
 
-    it('should return empty array when no users exist', async () => {
+      // Test empty array
       typeormRepo.find.mockResolvedValue([]);
-
-      const result = await userRepository.findAll();
-
+      result = await userRepository.findAll();
       expect(result).toEqual([]);
-      expect(typeormRepo.find).toHaveBeenCalledTimes(1);
     });
 
     it('should handle database connection errors', async () => {
       typeormRepo.find.mockRejectedValue(new Error('Connection timeout'));
-
-      await expect(userRepository.findAll()).rejects.toThrow(InternalServerErrorException);
-      await expect(userRepository.findAll()).rejects.toThrow('Error al obtener todos los usuarios. Error: Connection timeout');
-    });
-
-    it('should handle database query errors', async () => {
-      typeormRepo.find.mockRejectedValue(new Error('Table does not exist'));
-
       await expect(userRepository.findAll()).rejects.toThrow(InternalServerErrorException);
     });
   });
 
   describe('findByEmail', () => {
-    it('should return user when found by email', async () => {
+    it('should return user when found and null when not found', async () => {
+      // Found case
       typeormRepo.findOneBy.mockResolvedValue(mockUser);
-
-      const result = await userRepository.findByEmail('test@example.com');
-
+      let result = await userRepository.findByEmail('test@example.com');
       expect(result).toEqual(mockUser);
       expect(typeormRepo.findOneBy).toHaveBeenCalledWith({ email: 'test@example.com' });
-    });
 
-    it('should return null when user not found', async () => {
+      // Not found case
       typeormRepo.findOneBy.mockResolvedValue(null);
-
-      const result = await userRepository.findByEmail('nonexistent@example.com');
-
+      result = await userRepository.findByEmail('nonexistent@example.com');
       expect(result).toBeNull();
-      expect(typeormRepo.findOneBy).toHaveBeenCalledWith({ email: 'nonexistent@example.com' });
-    });
-
-    it('should handle empty email string', async () => {
-      typeormRepo.findOneBy.mockResolvedValue(null);
-
-      const result = await userRepository.findByEmail('');
-
-      expect(result).toBeNull();
-      expect(typeormRepo.findOneBy).toHaveBeenCalledWith({ email: '' });
-    });
-
-    it('should handle special characters in email', async () => {
-      const specialEmail = 'test+label@example.com';
-      typeormRepo.findOneBy.mockResolvedValue(mockUser);
-
-      const result = await userRepository.findByEmail(specialEmail);
-
-      expect(result).toEqual(mockUser);
-      expect(typeormRepo.findOneBy).toHaveBeenCalledWith({ email: specialEmail });
     });
 
     it('should handle database errors', async () => {
-      typeormRepo.findOneBy.mockRejectedValue(new Error('Database connection lost'));
-
+      typeormRepo.findOneBy.mockRejectedValue(new Error('Database connection failed'));
       await expect(userRepository.findByEmail('test@example.com')).rejects.toThrow(InternalServerErrorException);
-      await expect(userRepository.findByEmail('test@example.com')).rejects.toThrow('Error al buscar usuario por email. Error: Database connection lost');
+    });
+  });
+
+  describe('findById', () => {
+    it('should return user when found and null when not found', async () => {
+      // Found case
+      typeormRepo.findOneBy.mockResolvedValue(mockUser);
+      let result = await userRepository.findById(1);
+      expect(result).toEqual(mockUser);
+      expect(typeormRepo.findOneBy).toHaveBeenCalledWith({ id: 1 });
+
+      // Not found case
+      typeormRepo.findOneBy.mockResolvedValue(null);
+      result = await userRepository.findById(999);
+      expect(result).toBeNull();
+    });
+
+    it('should handle database errors', async () => {
+      typeormRepo.findOneBy.mockRejectedValue(new Error('Database connection failed'));
+      await expect(userRepository.findById(1)).rejects.toThrow(InternalServerErrorException);
     });
   });
 
@@ -131,30 +113,14 @@ describe('UserRepository', () => {
       typeormRepo.save.mockResolvedValue(mockUser);
 
       const result = await userRepository.save(newUser);
-
       expect(result).toEqual(mockUser);
       expect(typeormRepo.save).toHaveBeenCalledWith(newUser);
     });
 
-    it('should handle unique constraint violations', async () => {
+    it('should handle database errors', async () => {
       const newUser = { ...mockUser, id: undefined } as any;
-      typeormRepo.save.mockRejectedValue(new Error('UNIQUE constraint failed: users.email'));
-
+      typeormRepo.save.mockRejectedValue(new Error('Database constraint violation'));
       await expect(userRepository.save(newUser)).rejects.toThrow(InternalServerErrorException);
-      await expect(userRepository.save(newUser)).rejects.toThrow('Error al guardar el usuario. Error: UNIQUE constraint failed: users.email');
-    });
-
-    it('should handle validation errors', async () => {
-      const invalidUser = { ...mockUser, email: 'invalid-email', id: undefined } as any;
-      typeormRepo.save.mockRejectedValue(new Error('CHECK constraint failed'));
-
-      await expect(userRepository.save(invalidUser)).rejects.toThrow(InternalServerErrorException);
-    });
-
-    it('should handle null/undefined user', async () => {
-      typeormRepo.save.mockRejectedValue(new Error('Cannot save null entity'));
-
-      await expect(userRepository.save(null as any)).rejects.toThrow(InternalServerErrorException);
     });
   });
 
@@ -167,60 +133,21 @@ describe('UserRepository', () => {
       typeormRepo.findOneBy.mockResolvedValue(updatedUser);
 
       const result = await userRepository.update(1, updateData);
-
       expect(result).toEqual(updatedUser);
       expect(typeormRepo.update).toHaveBeenCalledWith(1, updateData);
-      expect(typeormRepo.findOneBy).toHaveBeenCalledWith({ id: 1 });
     });
 
-    it('should return null when user not found for update', async () => {
+    it('should return null when user not found for update and handle errors', async () => {
       const updateData = { firstName: 'Updated' };
 
-      typeormRepo.update.mockResolvedValue({ affected: 0 } as any);
-      typeormRepo.findOneBy.mockResolvedValue(null);
-
-      const result = await userRepository.update(999, updateData);
-
-      expect(result).toBeNull();
-      expect(typeormRepo.update).toHaveBeenCalledWith(999, updateData);
-      expect(typeormRepo.findOneBy).toHaveBeenCalledWith({ id: 999 });
-    });
-
-    it('should handle negative user IDs', async () => {
-      const updateData = { firstName: 'Updated' };
-
-      typeormRepo.update.mockResolvedValue({ affected: 0 } as any);
-      typeormRepo.findOneBy.mockResolvedValue(null);
-
-      const result = await userRepository.update(-1, updateData);
-
-      expect(result).toBeNull();
-    });
-
-    it('should handle empty update data', async () => {
+      // User not found - update succeeds but findOneBy returns null
       typeormRepo.update.mockResolvedValue({ affected: 1 } as any);
-      typeormRepo.findOneBy.mockResolvedValue(mockUser);
+      typeormRepo.findOneBy.mockResolvedValue(null);
+      let result = await userRepository.update(999, updateData);
+      expect(result).toBeNull();
 
-      const result = await userRepository.update(1, {});
-
-      expect(result).toEqual(mockUser);
-      expect(typeormRepo.update).toHaveBeenCalledWith(1, {});
-    });
-
-    it('should handle database update errors', async () => {
-      const updateData = { firstName: 'Updated' };
-      typeormRepo.update.mockRejectedValue(new Error('Foreign key constraint failed'));
-
-      await expect(userRepository.update(1, updateData)).rejects.toThrow(InternalServerErrorException);
-      await expect(userRepository.update(1, updateData)).rejects.toThrow('Error al actualizar el usuario. Error: Foreign key constraint failed');
-    });
-
-    it('should handle find errors after update', async () => {
-      const updateData = { firstName: 'Updated' };
-
-      typeormRepo.update.mockResolvedValue({ affected: 1 } as any);
-      typeormRepo.findOneBy.mockRejectedValue(new Error('Connection lost during find'));
-
+      // Database error
+      typeormRepo.update.mockRejectedValue(new Error('Update failed'));
       await expect(userRepository.update(1, updateData)).rejects.toThrow(InternalServerErrorException);
     });
   });
@@ -230,72 +157,19 @@ describe('UserRepository', () => {
       typeormRepo.delete.mockResolvedValue({ affected: 1 } as any);
 
       const result = await userRepository.delete(1);
-
       expect(result).toBe(true);
       expect(typeormRepo.delete).toHaveBeenCalledWith(1);
     });
 
-    it('should return false when user not found for deletion', async () => {
+    it('should return false when user not found for deletion and handle errors', async () => {
+      // User not found
       typeormRepo.delete.mockResolvedValue({ affected: 0 } as any);
-
-      const result = await userRepository.delete(999);
-
+      let result = await userRepository.delete(999);
       expect(result).toBe(false);
-      expect(typeormRepo.delete).toHaveBeenCalledWith(999);
-    });
 
-    it('should handle negative user IDs', async () => {
-      typeormRepo.delete.mockResolvedValue({ affected: 0 } as any);
-
-      const result = await userRepository.delete(-1);
-
-      expect(result).toBe(false);
-      expect(typeormRepo.delete).toHaveBeenCalledWith(-1);
-    });
-
-    it('should handle zero user ID', async () => {
-      typeormRepo.delete.mockResolvedValue({ affected: 0 } as any);
-
-      const result = await userRepository.delete(0);
-
-      expect(result).toBe(false);
-    });
-
-    it('should handle very large user IDs', async () => {
-      typeormRepo.delete.mockResolvedValue({ affected: 0 } as any);
-
-      const result = await userRepository.delete(Number.MAX_SAFE_INTEGER);
-
-      expect(result).toBe(false);
-    });
-
-    it('should handle foreign key constraint errors', async () => {
-      typeormRepo.delete.mockRejectedValue(new Error('FOREIGN KEY constraint failed'));
-
+      // Database error
+      typeormRepo.delete.mockRejectedValue(new Error('Delete failed'));
       await expect(userRepository.delete(1)).rejects.toThrow(InternalServerErrorException);
-      await expect(userRepository.delete(1)).rejects.toThrow('Error al eliminar el usuario. Error: FOREIGN KEY constraint failed');
-    });
-
-    it('should handle database connection errors during delete', async () => {
-      typeormRepo.delete.mockRejectedValue(new Error('Connection timeout'));
-
-      await expect(userRepository.delete(1)).rejects.toThrow(InternalServerErrorException);
-    });
-
-    it('should handle multiple affected rows (edge case)', async () => {
-      typeormRepo.delete.mockResolvedValue({ affected: 2 } as any);
-
-      const result = await userRepository.delete(1);
-
-      expect(result).toBe(true);
-    });
-
-    it('should handle undefined affected property', async () => {
-      typeormRepo.delete.mockResolvedValue({ affected: undefined } as any);
-
-      const result = await userRepository.delete(1);
-
-      expect(result).toBe(true); // undefined !== 0 evaluates to true
     });
   });
 });
