@@ -1,16 +1,23 @@
-//ARCHIVO: create-historial-imc.dto.ts
 import { ApiProperty } from "@nestjs/swagger";
-import { UserEntity } from "src/users/entities/user.entity";
 
+//ARCHIVO: create-historial-imc.dto.ts
 export class CreateHistorialImcDto {
+  @ApiProperty()
   altura: number;
-  
+
+  @ApiProperty()
   peso: number;
 
+  @ApiProperty()
   imc: number;
 
-  categoria: string; 
+  @ApiProperty()
+  categoria: string;
 
-  user: UserEntity
+  @ApiProperty()
+  user: string;  // CAMBIO: antes era 'user: UserEntity'
+
+  @ApiProperty()
+  fecha_calculo: Date; //Envíamos la fecha de creación
 }
 

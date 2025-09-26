@@ -4,13 +4,13 @@ import { Controller, Post, Body, ValidationPipe, Get, Query, UseGuards, Req } fr
 import { ImcService } from './imc.service';
 import { CalculoImcDto } from './dto/calculo-imc.dto';
 import { PaginacionHistorialImcDto } from './dto/paginacion-historial-imc.dto';
-import { CalculoImc } from './entities/CalculoImc.entity';
 import { SortValidationPipe } from './pipes/sort-validation.pipe';
 import { ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { PaginacionResponseDto } from './dto/paginacion-response.dto';
 import { AuthGuard } from '../auth/guards/auth.guard';
 import { RequestWithUser } from '../auth/interfaces/request-with-user.interface';
 import { CalculoImcResponseDto } from './dto/calculo-imc-response.dto';
+import { DashboardResponseDto } from './dto/dashboard/dashboard-response.dto';
 
 
 @Controller('imc')
@@ -38,7 +38,7 @@ export class ImcController {
   getHistorial(
     @Query('sort', new SortValidationPipe()) sort: 'asc' | 'desc' = 'desc',
     @Req() req: RequestWithUser
-  ): Promise<CalculoImc[]> {
+  ): Promise<CalculoImcResponseDto[]> {
     console.log('Obteniendo historial de IMC para '+ req.user.email)
     return this.imcService.findAllSorted(sort, req.user.id);
   }
@@ -57,4 +57,17 @@ export class ImcController {
     return this.imcService.findPag(paginacion, sort, req.user.id);
   }
 
+  /*
+    DASHBOARD
+  */
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Devuelve el resumen del dashboard del usuario' })
+  @UseGuards(AuthGuard)
+  @Get('dashboard')
+  async obtenerDashboard(
+    @Req() req: RequestWithUser
+  ): Promise<DashboardResponseDto> {
+    console.log('Dashboard para', req.user.email);
+    return this.imcService.obtenerDashboard(req.user.id);
+  }
 }
