@@ -6,7 +6,6 @@ import { AuthGuard } from '../auth/guards/auth.guard';
 import { RegisterDTO } from './dto/register.dto';
 import { UpdateUserDTO } from './dto/update-user.dto';
 import { UserResponseDto } from './dto/user-response.dto';
-import { MessageResponseDTO } from '../auth/dto/message-response.dto';
 
 describe('UsersController - Isolated', () => {
   let controller: UsersController;

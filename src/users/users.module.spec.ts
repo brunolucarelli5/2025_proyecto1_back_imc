@@ -1,6 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
-import { UsersModule } from './users.module';
 import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
 import { User } from './schemas/user.schema';

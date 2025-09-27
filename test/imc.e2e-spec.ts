@@ -18,7 +18,7 @@ describe('IMC Controller (e2e)', () => {
 
   const testUser = {
     email: 'test@example.com',
-    password: 'testPassword123',
+    password: 'testPassword123!',
     firstName: 'Test',
     lastName: 'User'
   };
@@ -480,7 +480,7 @@ describe('IMC Controller (e2e)', () => {
       // Create second user
       const secondUser = {
         email: 'second@example.com',
-        password: 'password123',
+        password: 'Password123!',
         firstName: 'Second',
         lastName: 'User'
       };

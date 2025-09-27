@@ -14,7 +14,7 @@ describe('Auth Controller (e2e)', () => {
 
   const testUser = {
     email: 'test@example.com',
-    password: 'testPassword123',
+    password: 'testPassword123!',
     firstName: 'Test',
     lastName: 'User'
   };
@@ -90,6 +90,9 @@ describe('Auth Controller (e2e)', () => {
             password: testUser.password,
           })
           .expect(201);
+
+        // Add small delay to ensure different timestamps
+        await new Promise(resolve => setTimeout(resolve, 1000));
 
         const response2 = await request(app.getHttpServer())
           .post('/auth/login')
@@ -276,8 +279,9 @@ describe('Auth Controller (e2e)', () => {
         .expect('Content-Type', /json/);
 
       expect(response.body).toEqual({
-        nombre: testUser.firstName,
-        apellido: testUser.lastName,
+        id: expect.any(String),
+        firstName: testUser.firstName,
+        lastName: testUser.lastName,
         email: testUser.email,
       });
     });
@@ -289,7 +293,7 @@ describe('Auth Controller (e2e)', () => {
         .expect(200);
 
       expect(response.body).not.toHaveProperty('password');
-      expect(response.body).not.toHaveProperty('id');
+      expect(response.body).toHaveProperty('id');
     });
 
     it('should reject invalid authorization header', async () => {
