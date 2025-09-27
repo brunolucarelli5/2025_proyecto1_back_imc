@@ -62,7 +62,7 @@ export class CalculoImcRepository implements ICalculoImcRepository {
           .skip(skip)
           .limit(mostrar)
           .exec(),
-        this.imcModel.countDocuments({ userId }).exec(),
+        this.imcModel.countDocuments({ user: userId }).exec(),
       ]);
 
       return { data, total };
