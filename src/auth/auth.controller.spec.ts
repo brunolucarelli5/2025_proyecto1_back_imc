@@ -1,31 +1,38 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { UnauthorizedException } from '@nestjs/common';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { LoginDTO } from './dto/login.dto';
 import { TokenPairDTO } from './dto/token-pair.dto';
 import { RequestWithUser } from './interfaces/request-with-user.interface';
-import { UserEntity } from '../users/entities/user.entity';
-import { Request } from 'express';
 import { JwtService } from './jwt/jwt.service';
 import { UsersService } from '../users/users.service';
+import { AuthGuard } from './guards/auth.guard';
 
 describe('AuthController', () => {
   let controller: AuthController;
   let service: jest.Mocked<AuthService>;
 
+  const mockTokenPair: TokenPairDTO = {
+    accessToken: 'mock.access.token',
+    refreshToken: 'mock.refresh.token',
+  };
+
   const mockUser = {
-    id: 1,
+    id: '1',
     email: 'test@example.com',
-    password: 'hashedpassword',
     firstName: 'Test',
     lastName: 'User',
-    imcs: [],
-  } as unknown as UserEntity;
-
-  const mockTokenPair: TokenPairDTO = {
-    accessToken: 'access-token',
-    refreshToken: 'refresh-token',
   };
+
+  const mockRequest = {
+    user: mockUser,
+    // Add minimal request properties to satisfy the interface
+    headers: {},
+    params: {},
+    query: {},
+    body: {},
+  } as unknown as RequestWithUser;
 
   beforeEach(async () => {
     const mockAuthService = {
@@ -34,12 +41,13 @@ describe('AuthController', () => {
     };
 
     const mockJwtService = {
-      generateToken: jest.fn().mockReturnValue('token'),
-      refreshToken: jest.fn().mockReturnValue('refreshToken'),
+      sign: jest.fn(),
+      verify: jest.fn(),
     };
 
-    const mockUserService = {
-      findByEmail: jest.fn().mockResolvedValue(mockUser),
+    const mockUsersService = {
+      findByEmail: jest.fn(),
+      findById: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -55,7 +63,7 @@ describe('AuthController', () => {
         },
         {
           provide: UsersService,
-          useValue: mockUserService,
+          useValue: mockUsersService,
         },
       ],
     }).compile();
@@ -73,183 +81,257 @@ describe('AuthController', () => {
   });
 
   describe('login', () => {
-    const validLoginDto: LoginDTO = {
-      email: 'test@example.com',
-      password: 'password123',
-    };
+    it('should login successfully with valid credentials and log message', async () => {
+      const loginDto: LoginDTO = {
+        email: 'test@example.com',
+        password: 'validPassword123',
+      };
 
-    it('should login successfully with valid credentials', async () => {
-      service.login.mockResolvedValue(mockTokenPair);
-
-      const result = await controller.login(validLoginDto);
-
-      expect(result).toEqual(mockTokenPair);
-      expect(service.login).toHaveBeenCalledWith(validLoginDto);
-      expect(service.login).toHaveBeenCalledTimes(1);
-    });
-
-    it('should handle complex email format', async () => {
-      const loginDto = { ...validLoginDto, email: 'complex.email+tag@domain.co.uk' };
+      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
       service.login.mockResolvedValue(mockTokenPair);
 
       const result = await controller.login(loginDto);
 
+      expect(consoleSpy).toHaveBeenCalledWith('Logueando al usuario test@example.com');
+      expect(service.login).toHaveBeenCalledWith(loginDto);
       expect(result).toEqual(mockTokenPair);
+
+      consoleSpy.mockRestore();
+    });
+
+    it('should handle different email formats in login', async () => {
+      const emailTestCases = [
+        'simple@test.com',
+        'complex.email+tag@subdomain.example.org',
+        'user123@domain.co.uk',
+        'test.user@multi-level.domain.info',
+      ];
+
+      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+      service.login.mockResolvedValue(mockTokenPair);
+
+      for (const email of emailTestCases) {
+        const loginDto: LoginDTO = { email, password: 'password123' };
+
+        const result = await controller.login(loginDto);
+
+        expect(consoleSpy).toHaveBeenCalledWith(`Logueando al usuario ${email}`);
+        expect(service.login).toHaveBeenCalledWith(loginDto);
+        expect(result).toEqual(mockTokenPair);
+      }
+
+      consoleSpy.mockRestore();
+    });
+
+    it('should propagate authentication errors from service', async () => {
+      const loginDto: LoginDTO = {
+        email: 'invalid@example.com',
+        password: 'wrongPassword',
+      };
+
+      service.login.mockRejectedValue(new UnauthorizedException('Invalid credentials'));
+
+      await expect(controller.login(loginDto)).rejects.toThrow(UnauthorizedException);
       expect(service.login).toHaveBeenCalledWith(loginDto);
     });
 
-    it('should propagate service errors', async () => {
-      const errorMessage = 'Invalid credentials';
-      service.login.mockRejectedValue(new Error(errorMessage));
+    it('should handle boundary password cases in login', async () => {
+      const passwordTestCases = [
+        { password: 'a', description: 'single character' },
+        { password: 'x'.repeat(1000), description: 'very long password' },
+        { password: '!@#$%^&*()', description: 'special characters only' },
+        { password: '12345678', description: 'numbers only' },
+        { password: 'MixedCase123!', description: 'complex password' },
+      ];
 
-      await expect(controller.login(validLoginDto)).rejects.toThrow(
-        errorMessage,
-      );
-      expect(service.login).toHaveBeenCalledWith(validLoginDto);
-    });
+      service.login.mockResolvedValue(mockTokenPair);
 
+      for (const testCase of passwordTestCases) {
+        const loginDto: LoginDTO = {
+          email: 'test@example.com',
+          password: testCase.password,
+        };
 
-    it('should return tokens with correct structure', async () => {
-      const customTokenPair: TokenPairDTO = {
-        accessToken:
-          'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.custom-payload.signature',
-        refreshToken:
-          'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.refresh-payload.signature',
-      };
+        const result = await controller.login(loginDto);
 
-      service.login.mockResolvedValue(customTokenPair);
-
-      const result = await controller.login(validLoginDto);
-
-      expect(result).toEqual(customTokenPair);
-      expect(typeof result.accessToken).toBe('string');
-      expect(typeof result.refreshToken).toBe('string');
-      expect(result.accessToken).toBeDefined();
-      expect(result.refreshToken).toBeDefined();
+        expect(service.login).toHaveBeenCalledWith(loginDto);
+        expect(result).toEqual(mockTokenPair);
+      }
     });
   });
 
   describe('tokens', () => {
-    it('should refresh tokens successfully with valid token', async () => {
-      const token = 'valid-refresh-token';
-      const expectedResult = {
-        accessToken: 'new-access-token',
-        refreshToken: 'new-refresh-token',
-      };
+    it('should refresh tokens successfully and log message', async () => {
+      const refreshToken = 'valid.refresh.token';
+      const expectedTokens = { accessToken: 'new.access.token' };
 
-      service.tokens.mockResolvedValue(expectedResult);
+      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+      service.tokens.mockResolvedValue(expectedTokens);
 
-      const result = await controller.tokens(token);
+      const result = await controller.tokens(refreshToken);
 
-      expect(result).toEqual(expectedResult);
-      expect(service.tokens).toHaveBeenCalledWith(token);
+      expect(consoleSpy).toHaveBeenCalledWith('Generando nuevos tokens');
+      expect(service.tokens).toHaveBeenCalledWith(refreshToken);
+      expect(result).toEqual(expectedTokens);
+
+      consoleSpy.mockRestore();
     });
 
-    it('should handle refresh token that returns only access token', async () => {
-      const token = 'refresh-token-not-near-expiry';
-      const expectedResult = {
-        accessToken: 'new-access-token',
-      };
+    it('should handle different token formats', async () => {
+      const tokenTestCases = [
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c',
+        'short.token',
+        'medium.length.token.format',
+        'very.long.token.with.multiple.segments.and.extended.payload.information',
+      ];
 
-      service.tokens.mockResolvedValue(expectedResult);
+      service.tokens.mockResolvedValue({ accessToken: 'new.token' });
 
-      const result = await controller.tokens(token);
+      for (const token of tokenTestCases) {
+        const result = await controller.tokens(token);
 
-      expect(result).toEqual(expectedResult);
-      expect(service.tokens).toHaveBeenCalledWith(token);
+        expect(service.tokens).toHaveBeenCalledWith(token);
+        expect(result).toHaveProperty('accessToken');
+      }
     });
 
+    it('should propagate token refresh errors from service', async () => {
+      const invalidToken = 'invalid.refresh.token';
+      service.tokens.mockRejectedValue(new UnauthorizedException('Invalid refresh token'));
 
-    it('should propagate service errors', async () => {
-      const token = 'expired-token';
-      const errorMessage = 'Token expired';
+      await expect(controller.tokens(invalidToken)).rejects.toThrow(UnauthorizedException);
+      expect(service.tokens).toHaveBeenCalledWith(invalidToken);
+    });
 
-      service.tokens.mockRejectedValue(new Error(errorMessage));
+    it('should handle token refresh boundary cases', async () => {
+      const boundaryTestCases = [
+        { token: '', expectedCall: true },
+        { token: 'a', expectedCall: true },
+        { token: 'x'.repeat(10000), expectedCall: true }, // Very long token
+      ];
 
-      await expect(controller.tokens(token)).rejects.toThrow(errorMessage);
-      expect(service.tokens).toHaveBeenCalledWith(token);
+      service.tokens.mockResolvedValue({ accessToken: 'token' });
+
+      for (const testCase of boundaryTestCases) {
+        if (testCase.expectedCall) {
+          const result = await controller.tokens(testCase.token);
+          expect(service.tokens).toHaveBeenCalledWith(testCase.token);
+          expect(result).toHaveProperty('accessToken');
+        }
+      }
     });
   });
 
   describe('me', () => {
-    it('should return user information for authenticated user', async () => {
-      const mockRequestWithUser: RequestWithUser = {
-        user: mockUser,
-        headers: {},
-      } as RequestWithUser;
-
-      const result = await controller.me(mockRequestWithUser);
+    it('should return current user information', async () => {
+      const result = controller.me(mockRequest);
 
       expect(result).toEqual({
-        id: mockUser.id,
-        email: mockUser.email,
-        firstName: mockUser.firstName,
-        lastName: mockUser.lastName,
+        id: '1',
+        email: 'test@example.com',
+        firstName: 'Test',
+        lastName: 'User',
       });
     });
 
+    it('should handle different user data structures', async () => {
+      const userTestCases = [
+        {
+          id: '1',
+          email: 'simple@test.com',
+          firstName: 'John',
+          lastName: 'Doe',
+        },
+        {
+          id: '999',
+          email: 'complex.email+tag@subdomain.example.org',
+          firstName: 'María José',
+          lastName: 'García-López',
+        },
+        {
+          id: '42',
+          email: 'test@domain.co',
+          firstName: 'A',
+          lastName: 'B',
+        },
+      ];
 
-    it('should not expose sensitive user information', async () => {
-      const mockRequestWithUser: RequestWithUser = {
-        user: mockUser,
-        headers: {},
-      } as RequestWithUser;
+      for (const user of userTestCases) {
+        const request = { user } as unknown as RequestWithUser;
+        const result = controller.me(request);
 
-      const result = await controller.me(mockRequestWithUser);
+        expect(result).toEqual({
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+        });
+      }
+    });
 
-      expect(result).not.toHaveProperty('password');
-      expect(result).not.toHaveProperty('imcs');
+    it('should handle boundary user ID values', async () => {
+      const idTestCases = ['1', '999999', '0', '-1'];
+
+      for (const id of idTestCases) {
+        const request = {
+          user: { ...mockUser, id },
+        } as unknown as RequestWithUser;
+
+        const result = controller.me(request);
+
+        expect(result.id).toBe(id);
+        expect(result).toHaveProperty('email');
+        expect(result).toHaveProperty('firstName');
+        expect(result).toHaveProperty('lastName');
+      }
+    });
+
+    it('should maintain consistent response structure', async () => {
+      const result = controller.me(mockRequest);
 
       expect(result).toHaveProperty('id');
+      expect(result).toHaveProperty('email');
       expect(result).toHaveProperty('firstName');
       expect(result).toHaveProperty('lastName');
-      expect(result).toHaveProperty('email');
+      expect(Object.keys(result)).toHaveLength(4);
     });
-
   });
 
-  describe('Controller integration', () => {
-    it('should have all required endpoints', () => {
-      expect(typeof controller.login).toBe('function');
-      expect(typeof controller.tokens).toBe('function');
-      expect(typeof controller.me).toBe('function');
-    });
-
-    it('should maintain proper method signatures', () => {
-      expect(controller.login.length).toBe(1); // body parameter
-      expect(controller.tokens.length).toBe(1); // token parameter
-      expect(controller.me.length).toBe(1); // request parameter
-    });
-
-    it('should properly inject AuthService dependency', () => {
-      expect(service).toBeDefined();
-      expect(service.login).toBeDefined();
-      expect(service.tokens).toBeDefined();
-    });
-
-    it('should handle async operations correctly', async () => {
-      const loginDto: LoginDTO = {
-        email: 'test@example.com',
-        password: 'password',
-      };
+  describe('integration scenarios', () => {
+    it('should handle complete authentication flow', async () => {
+      // Login
+      const loginDto: LoginDTO = { email: 'test@example.com', password: 'password123' };
       service.login.mockResolvedValue(mockTokenPair);
 
-      const result = await controller.login(loginDto);
+      const loginResult = await controller.login(loginDto);
+      expect(loginResult).toEqual(mockTokenPair);
 
-      expect(result).toBeDefined();
-      expect(result).toEqual(mockTokenPair);
+      // Token refresh
+      service.tokens.mockResolvedValue({ accessToken: 'new.access', refreshToken: 'new.refresh' });
+
+      const refreshResult = await controller.tokens(mockTokenPair.refreshToken);
+      expect(refreshResult).toHaveProperty('accessToken');
+
+      // Get user info
+      const userResult = controller.me(mockRequest);
+      expect(userResult).toHaveProperty('email');
     });
-  });
 
-  describe('Error handling', () => {
-    it('should propagate service errors', async () => {
-      const loginDto: LoginDTO = {
-        email: 'test@example.com',
-        password: 'password',
-      };
+    it('should handle error propagation correctly', async () => {
+      const errorTestCases = [
+        { method: 'login', error: new UnauthorizedException('Login failed') },
+        { method: 'tokens', error: new UnauthorizedException('Token refresh failed') },
+      ];
 
-      service.login.mockRejectedValue(new Error('Generic error'));
-      await expect(controller.login(loginDto)).rejects.toThrow('Generic error');
+      for (const testCase of errorTestCases) {
+        if (testCase.method === 'login') {
+          service.login.mockRejectedValue(testCase.error);
+          await expect(controller.login({ email: 'test@example.com', password: 'password' })).rejects.toThrow(testCase.error);
+        } else if (testCase.method === 'tokens') {
+          service.tokens.mockRejectedValue(testCase.error);
+          await expect(controller.tokens('token')).rejects.toThrow(testCase.error);
+        }
+      }
     });
   });
 });

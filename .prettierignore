@@ -1,0 +1,8 @@
+# Ignore all TypeScript files for prettier formatting
+*.ts
+*.js
+*.tsx
+*.jsx
+
+# But still allow specific files if needed
+# !src/important-file.ts

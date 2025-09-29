@@ -4,21 +4,21 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import * as request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
-import { getRepositoryToken } from '@nestjs/typeorm';
-import { UserEntity } from '../src/users/entities/user.entity';
-import { CalculoImc } from '../src/imc/entities/CalculoImc.entity';
-import { Repository } from 'typeorm';
+import { getModelToken } from '@nestjs/mongoose';
+import { User } from '../src/users/schemas/user.schema';
+import { CalculoImc } from '../src/imc/schemas/calculo-imc.schema';
+import { Model } from 'mongoose';
 import { hashSync } from 'bcrypt';
 
 describe('IMC Controller (e2e)', () => {
   let app: INestApplication<App>;
-  let userRepository: Repository<UserEntity>;
-  let imcRepository: Repository<CalculoImc>;
+  let userModel: Model<User>;
+  let imcModel: Model<CalculoImc>;
   let accessToken: string;
 
   const testUser = {
     email: 'test@example.com',
-    password: 'testPassword123',
+    password: 'testPassword123!',
     firstName: 'Test',
     lastName: 'User'
   };
@@ -29,8 +29,8 @@ describe('IMC Controller (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
-    userRepository = moduleFixture.get<Repository<UserEntity>>(getRepositoryToken(UserEntity));
-    imcRepository = moduleFixture.get<Repository<CalculoImc>>(getRepositoryToken(CalculoImc));
+    userModel = moduleFixture.get<Model<User>>(getModelToken(User.name));
+    imcModel = moduleFixture.get<Model<CalculoImc>>(getModelToken(CalculoImc.name));
 
     // Configure validation pipe as in production
     app.useGlobalPipes(
@@ -43,12 +43,12 @@ describe('IMC Controller (e2e)', () => {
 
     await app.init();
 
-    // Setup test data - Clear tables using query builder to avoid foreign key constraints
-    await imcRepository.createQueryBuilder().delete().execute();
-    await userRepository.createQueryBuilder().delete().execute();
+    // Setup test data - Clear collections
+    await imcModel.deleteMany({});
+    await userModel.deleteMany({});
 
     const hashedPassword = hashSync(testUser.password, 10);
-    await userRepository.save({
+    await userModel.create({
       ...testUser,
       password: hashedPassword,
     });
@@ -480,7 +480,7 @@ describe('IMC Controller (e2e)', () => {
       // Create second user
       const secondUser = {
         email: 'second@example.com',
-        password: 'password123',
+        password: 'Password123!',
         firstName: 'Second',
         lastName: 'User'
       };

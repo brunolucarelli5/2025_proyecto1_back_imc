@@ -3,18 +3,18 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import * as request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
-import { getRepositoryToken } from '@nestjs/typeorm';
-import { UserEntity } from '../src/users/entities/user.entity';
-import { Repository } from 'typeorm';
+import { getModelToken } from '@nestjs/mongoose';
+import { User } from '../src/users/schemas/user.schema';
+import { Model } from 'mongoose';
 import { hashSync } from 'bcrypt';
 
 describe('Auth Controller (e2e)', () => {
   let app: INestApplication<App>;
-  let userRepository: Repository<UserEntity>;
+  let userModel: Model<User>;
 
   const testUser = {
     email: 'test@example.com',
-    password: 'testPassword123',
+    password: 'testPassword123!',
     firstName: 'Test',
     lastName: 'User'
   };
@@ -25,7 +25,7 @@ describe('Auth Controller (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
-    userRepository = moduleFixture.get<Repository<UserEntity>>(getRepositoryToken(UserEntity));
+    userModel = moduleFixture.get<Model<User>>(getModelToken(User.name));
 
     app.useGlobalPipes(
       new ValidationPipe({
@@ -37,17 +37,19 @@ describe('Auth Controller (e2e)', () => {
 
     await app.init();
 
-    // Clear users table and create test user
-    await userRepository.clear();
+    // Clear users collection and create test user
+    await userModel.deleteMany({});
     const hashedPassword = hashSync(testUser.password, 10);
-    await userRepository.save({
+    await userModel.create({
       ...testUser,
       password: hashedPassword,
     });
   });
 
   afterEach(async () => {
-    await app.close();
+    if (app) {
+      await app.close();
+    }
   });
 
   describe('/auth/login (POST)', () => {
@@ -88,6 +90,9 @@ describe('Auth Controller (e2e)', () => {
             password: testUser.password,
           })
           .expect(201);
+
+        // Add small delay to ensure different timestamps
+        await new Promise(resolve => setTimeout(resolve, 1000));
 
         const response2 = await request(app.getHttpServer())
           .post('/auth/login')
@@ -274,8 +279,9 @@ describe('Auth Controller (e2e)', () => {
         .expect('Content-Type', /json/);
 
       expect(response.body).toEqual({
-        nombre: testUser.firstName,
-        apellido: testUser.lastName,
+        id: expect.any(String),
+        firstName: testUser.firstName,
+        lastName: testUser.lastName,
         email: testUser.email,
       });
     });
@@ -287,7 +293,7 @@ describe('Auth Controller (e2e)', () => {
         .expect(200);
 
       expect(response.body).not.toHaveProperty('password');
-      expect(response.body).not.toHaveProperty('id');
+      expect(response.body).toHaveProperty('id');
     });
 
     it('should reject invalid authorization header', async () => {
